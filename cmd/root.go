@@ -24,12 +24,14 @@ of command-line binaries from GitHub, GitLab, or custom URLs.`,
 }
 
 func Execute() {
+	defer func() {
+		logging.Logger.Sync()
+	}()
+
 	if err := rootCmd.Execute(); err != nil {
 		logging.Logger.Errorw("command exited with error", err)
-		logging.Logger.Sync()
 		os.Exit(1)
 	}
-	logging.Logger.Sync()
 }
 
 func init() {

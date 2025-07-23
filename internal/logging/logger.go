@@ -17,6 +17,8 @@ type Encoding int
 const (
 	Console Encoding = iota
 	Json
+
+	logLevelEnvVar = "AZABOX_LOG_LEVEL"
 )
 
 type Config struct {
@@ -36,7 +38,7 @@ func getEndoding(enc Encoding) string {
 func createZapConfig(cfg Config) zap.Config {
 	level := LogLevel
 	if level == "" {
-		level = os.Getenv("AZABOX_LOG_LEVEL")
+		level = os.Getenv(logLevelEnvVar)
 		if level == "" {
 			level = "info"
 		}
