@@ -54,6 +54,7 @@ func TestCreateZapConfig(t *testing.T) {
 	t.Run("should override log level from log-level flag even if env var is set", func(t *testing.T) {
 		t.Cleanup(func() {
 			LogLevel = ""
+			Logger = nil
 		})
 
 		t.Setenv(logLevelEnvVar, "debug")
@@ -65,6 +66,7 @@ func TestCreateZapConfig(t *testing.T) {
 	t.Run("should default log level to info when unknow log-level is passed", func(t *testing.T) {
 		t.Cleanup(func() {
 			LogLevel = ""
+			Logger = nil
 		})
 
 		t.Setenv(logLevelEnvVar, "foo")
@@ -94,6 +96,7 @@ func TestInitLogger(t *testing.T) {
 	t.Run("should init the logger", func(t *testing.T) {
 		t.Cleanup(func() {
 			LogLevel = ""
+			Logger = nil
 		})
 
 		Logger = nil

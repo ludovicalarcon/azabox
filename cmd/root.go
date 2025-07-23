@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 )
@@ -23,15 +21,18 @@ of command-line binaries from GitHub, GitLab, or custom URLs.`,
 	},
 }
 
-func Execute() {
+func Execute() error {
 	defer func() {
-		logging.Logger.Sync()
+		if logging.Logger != nil {
+			logging.Logger.Sync()
+		}
 	}()
 
 	if err := rootCmd.Execute(); err != nil {
 		logging.Logger.Errorw("command exited with error", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func init() {
