@@ -20,7 +20,7 @@ tasks:
     cmds:
       - task: fmt
       - task: vet
-      - "go run main.go {{.ARGS}}"
+      - "go run main.go {{.CLI_ARGS}}"
 
   build:
     desc: build {{.BINARY_NAME}}
