@@ -11,25 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
+	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
 )
 
 func TestRootCmd(t *testing.T) {
-	t.Run("should show help without error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.Logger = nil
-			logging.LogLevel = ""
-		})
-
-		buf := new(bytes.Buffer)
-		rootCmd.SetOut(buf)
-		rootCmd.SetArgs([]string{})
-
-		Execute()
-
-		output := buf.String()
-		assert.Contains(t, output, "azabox is a CLI tool")
-	})
-
 	t.Run("should init logger in persistentPreRun", func(t *testing.T) {
 		t.Cleanup(func() {
 			logging.Logger = nil
@@ -38,8 +23,20 @@ func TestRootCmd(t *testing.T) {
 
 		assert.Nil(t, logging.Logger)
 
-		rootCmd.PersistentPreRun(rootCmd.Root(), []string{})
+		err := rootCmd.PersistentPreRunE(rootCmd.Root(), []string{})
+		require.NoError(t, err)
 		assert.NotNil(t, logging.Logger)
+	})
+
+	t.Run("should init registry resolver with default resolvers", func(t *testing.T) {
+		t.Cleanup(func() {
+			logging.Logger = nil
+			logging.LogLevel = ""
+		})
+		err := rootCmd.Execute()
+		assert.NoError(t, err)
+		resolvers := resolver.GetRegistryResolver().GetResolvers()
+		assert.Len(t, resolvers, 1)
 	})
 
 	t.Run("should set logLevel when flag is used", func(t *testing.T) {
@@ -71,7 +68,8 @@ func TestRootCmd(t *testing.T) {
 		}
 
 		rootCmd = fakeCmd
-		logging.InitLogger(logging.Config{Encoding: logging.Json})
+		err := logging.InitLogger(logging.Config{Encoding: logging.Json})
+		require.NoError(t, err)
 
 		// capture stderr
 		saveSterr := os.Stderr
@@ -92,7 +90,8 @@ func TestRootCmd(t *testing.T) {
 
 		// read captured output
 		var buff bytes.Buffer
-		io.Copy(&buff, r)
+		_, err = io.Copy(&buff, r)
+		assert.NoError(t, err)
 		r.Close()
 
 		output := buff.String()

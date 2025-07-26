@@ -43,6 +43,7 @@ func createZapConfig(cfg Config) zap.Config {
 			level = "info"
 		}
 	}
+
 	var zapLevel zapcore.Level
 	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
 		zapLevel = zapcore.InfoLevel
@@ -57,6 +58,11 @@ func createZapConfig(cfg Config) zap.Config {
 
 	if cfg.Encoding == Console {
 		cfgZap.EncoderConfig = zap.NewDevelopmentEncoderConfig()
+	}
+
+	if zapLevel != zap.DebugLevel {
+		cfgZap.DisableStacktrace = true
+		cfgZap.DisableCaller = true
 	}
 
 	return cfgZap
