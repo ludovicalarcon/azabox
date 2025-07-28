@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,7 +93,8 @@ func TestCreateBinaryInfo(t *testing.T) {
 				binaryInfo := createBinaryInfo(tc.binary, tc.version)
 				assert.Equal(t, tc.expected.owner, binaryInfo.Owner)
 				assert.Equal(t, tc.expected.name, binaryInfo.Name)
-				assert.Equal(t, tc.binary, binaryInfo.FullName)
+				assert.Equal(t, fmt.Sprintf("%s/%s",
+					tc.expected.owner, tc.expected.name), binaryInfo.FullName)
 				assert.Equal(t, tc.version, binaryInfo.Version)
 			})
 		}
@@ -125,7 +127,7 @@ func TestBinariesInfoFromArgs(t *testing.T) {
 			},
 		},
 		{
-			name:     "one binary",
+			name:     "one binary full",
 			binaries: []string{"foo/bar"},
 			version:  "latest",
 			expected: struct {
@@ -139,6 +141,20 @@ func TestBinariesInfoFromArgs(t *testing.T) {
 			},
 		},
 		{
+			name:     "one binary",
+			binaries: []string{"foo"},
+			version:  "latest",
+			expected: struct {
+				length   int
+				fullName []string
+				version  string
+			}{
+				length:   1,
+				fullName: []string{"foo/foo"},
+				version:  "latest",
+			},
+		},
+		{
 			name:     "nultiples binaries",
 			binaries: []string{"foo/bar", "totocli", "cli/cli"},
 			version:  "1.2.3",
@@ -148,7 +164,7 @@ func TestBinariesInfoFromArgs(t *testing.T) {
 				version  string
 			}{
 				length:   3,
-				fullName: []string{"foo/bar", "totocli", "cli/cli"},
+				fullName: []string{"foo/bar", "totocli/totocli", "cli/cli"},
 				version:  "1.2.3",
 			},
 		},

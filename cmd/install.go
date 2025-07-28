@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -32,6 +33,9 @@ func createBinaryInfo(binaryName, version string) dto.BinaryInfo {
 		binaryInfo.Owner = info[0]
 		binaryInfo.Name = info[1]
 	}
+
+	binaryInfo.FullName = fmt.Sprintf("%s/%s", binaryInfo.Owner, binaryInfo.Name)
+
 	return binaryInfo
 }
 
@@ -52,11 +56,24 @@ func installBinary(binaryInfo dto.BinaryInfo) error {
 	fmt.Printf("Installing binary \"%s\" with version \"%s\"\n", binaryInfo.FullName, binaryInfo.Version)
 
 	resolvers := resolver.GetRegistryResolver().GetResolvers()
-	for _, resolver := range resolvers {
-		_, err := resolver.Resolve(binaryInfo)
+	found := false
+	for resolver := range resolvers {
+		url, err := resolver.Resolve(binaryInfo)
 		if err != nil {
+			if strings.Contains(err.Error(), http.StatusText(http.StatusNotFound)) {
+				continue
+			}
 			return err
+		} else if url == "" {
+			continue
 		}
+		found = true
+	}
+
+	if !found {
+		logging.Logger.Debugw("Binary not found", "binary", binaryInfo.Name, "owner",
+			binaryInfo.Owner, "version", binaryInfo.Version)
+		fmt.Printf("Binary \"%s\" with version \"%s\" not found\n", binaryInfo.FullName, binaryInfo.Version)
 	}
 	return nil
 }

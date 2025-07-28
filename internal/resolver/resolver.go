@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
+	"gitlab.com/ludovic-alarcon/azabox/internal/types"
 )
 
 var (
@@ -17,7 +18,7 @@ type Resolver interface {
 
 type RegistryResolver struct {
 	mutex     sync.RWMutex
-	resolvers []Resolver
+	resolvers types.Set[Resolver]
 }
 
 func GetRegistryResolver() *RegistryResolver {
@@ -29,23 +30,23 @@ func GetRegistryResolver() *RegistryResolver {
 
 func newRegistryResolver() *RegistryResolver {
 	return &RegistryResolver{
-		resolvers: make([]Resolver, 0, 1),
+		resolvers: types.NewSet[Resolver](1),
 	}
 }
 
 func (r *RegistryResolver) WithDefaultResolvers() *RegistryResolver {
-	r.Register(&GithubResolver{})
+	r.Register(NewGithubResolver(GHBaseAPIUrl))
 	return r
 }
 
 func (r *RegistryResolver) Register(resolver Resolver) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	r.resolvers = append(r.resolvers, resolver)
+	r.resolvers.Add(resolver)
 }
 
-func (r *RegistryResolver) GetResolvers() []Resolver {
+func (r *RegistryResolver) GetResolvers() types.Set[Resolver] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	return append([]Resolver{}, r.resolvers...)
+	return r.resolvers
 }
