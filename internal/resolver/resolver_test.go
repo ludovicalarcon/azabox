@@ -10,7 +10,7 @@ import (
 
 type DummyResolver struct{}
 
-func (d *DummyResolver) Resolve(dto.BinaryInfo) (string, error) {
+func (d *DummyResolver) Resolve(*dto.BinaryInfo) (string, error) {
 	return "", nil
 }
 

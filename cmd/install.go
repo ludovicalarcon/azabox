@@ -3,10 +3,10 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"gitlab.com/ludovic-alarcon/azabox/internal/downloader"
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
@@ -50,31 +50,36 @@ func binariesInfoFromArgs(installArgs []string, version string) []dto.BinaryInfo
 	return binaryInfosSlice
 }
 
-func installBinary(binaryInfo dto.BinaryInfo) error {
+func installBinary(binaryInfo *dto.BinaryInfo) error {
 	logging.Logger.Debugw("Installing binary", "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.Version)
 	fmt.Printf("Installing binary \"%s\" with version \"%s\"\n", binaryInfo.FullName, binaryInfo.Version)
 
 	resolvers := resolver.GetRegistryResolver().GetResolvers()
-	found := false
+	resolvedUrl := ""
 	for resolver := range resolvers {
 		url, err := resolver.Resolve(binaryInfo)
-		if err != nil {
-			if strings.Contains(err.Error(), http.StatusText(http.StatusNotFound)) {
-				continue
-			}
-			return err
-		} else if url == "" {
-			continue
+		if err == nil && url != "" {
+			resolvedUrl = url
+			logging.Logger.Debugw("Matched resolver", "type",
+				fmt.Sprintf("%T", resolver), "url", url)
+			break
 		}
-		found = true
 	}
 
-	if !found {
+	if resolvedUrl == "" {
 		logging.Logger.Debugw("Binary not found", "binary", binaryInfo.Name, "owner",
 			binaryInfo.Owner, "version", binaryInfo.Version)
 		fmt.Printf("Binary \"%s\" with version \"%s\" not found\n", binaryInfo.FullName, binaryInfo.Version)
+		return nil
 	}
+
+	downloader, err := downloader.New()
+	if err != nil {
+		return err
+	}
+
+	downloader.Install(binaryInfo, resolvedUrl)
 	return nil
 }
 
@@ -91,7 +96,7 @@ func newInstallCommand() *cobra.Command {
 
 			binaryInfoSlice := binariesInfoFromArgs(args, version)
 			for _, binaryInfo := range binaryInfoSlice {
-				err := installBinary(binaryInfo)
+				err := installBinary(&binaryInfo)
 				if err != nil {
 					return err
 				}

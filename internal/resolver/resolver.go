@@ -13,7 +13,7 @@ var (
 )
 
 type Resolver interface {
-	Resolve(dto.BinaryInfo) (string, error)
+	Resolve(*dto.BinaryInfo) (string, error)
 }
 
 type RegistryResolver struct {

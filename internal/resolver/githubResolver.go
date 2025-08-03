@@ -29,6 +29,15 @@ type GithubResolver struct {
 	releaseLatestAPIUrlTemplate string
 }
 
+type GitHubReleaseResponseAsset struct {
+	Url string `json:"browser_download_url"`
+}
+
+type GitHubReleaseResponse struct {
+	Name   string                       `json:"name"`
+	Assets []GitHubReleaseResponseAsset `json:"assets"`
+}
+
 func NewGithubResolver(baseAPIUrl string) *GithubResolver {
 	return &GithubResolver{
 		baseAPIUrl:                  baseAPIUrl,
@@ -47,7 +56,7 @@ func createHttpRequest(url string) *http.Request {
 	return req
 }
 
-func (r *GithubResolver) Resolve(binaryInfo dto.BinaryInfo) (string, error) {
+func (r *GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
 	logging.Logger.Debugw("Resolve binary for github", "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.Version)
 
@@ -68,11 +77,7 @@ func (r *GithubResolver) Resolve(binaryInfo dto.BinaryInfo) (string, error) {
 		return "", fmt.Errorf("request error: %s", resp.Status)
 	}
 
-	var data struct {
-		Assets []struct {
-			DownloadURL string `json:"browser_download_url"`
-		}
-	}
+	var data GitHubReleaseResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return "", fmt.Errorf("failed to parse data: %w", err)
 	}
@@ -82,11 +87,13 @@ func (r *GithubResolver) Resolve(binaryInfo dto.BinaryInfo) (string, error) {
 	archNormalized := platform.NormalizeArch(arch)
 
 	for _, asset := range data.Assets {
-		downloadURL := strings.ToLower(asset.DownloadURL)
-		if strings.Contains(downloadURL, os) && (strings.Contains(downloadURL, arch) || strings.Contains(downloadURL, archNormalized)) {
-			logging.Logger.Debugw("download URL", "url", asset.DownloadURL, "name", binaryInfo.Name,
-				"platform", os, "arch", arch, "version", binaryInfo.Version)
-			return asset.DownloadURL, nil
+		downloadURL := strings.ToLower(asset.Url)
+		if strings.Contains(downloadURL, os) &&
+			(strings.Contains(downloadURL, arch) || strings.Contains(downloadURL, archNormalized)) {
+			logging.Logger.Debugw("download URL", "url", asset.Url, "name", binaryInfo.Name,
+				"platform", os, "arch", arch, "version", binaryInfo.Version, "resolvedVersion", data.Name)
+			binaryInfo.InstalledVersion = data.Name
+			return asset.Url, nil
 		}
 	}
 
