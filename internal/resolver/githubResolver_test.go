@@ -78,7 +78,7 @@ func TestCreateHttpRequest(t *testing.T) {
 }
 
 func TestResolve(t *testing.T) {
-	t.Run("should resolve successfuly", func(t *testing.T) {
+	t.Run("should resolve successfully", func(t *testing.T) {
 		t.Cleanup(func() {
 			logging.LogLevel = ""
 			logging.Logger = nil
@@ -100,7 +100,8 @@ func TestResolve(t *testing.T) {
 			if err != nil {
 				require.NoError(t, err)
 			}
-			w.Write(data)
+			_, err = w.Write(data)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -112,7 +113,7 @@ func TestResolve(t *testing.T) {
 		assert.Equal(t, expectedURL, url)
 	})
 
-	t.Run("should resolve successfuly on latest version", func(t *testing.T) {
+	t.Run("should resolve successfully on latest version", func(t *testing.T) {
 		t.Cleanup(func() {
 			logging.LogLevel = ""
 			logging.Logger = nil
@@ -139,7 +140,8 @@ func TestResolve(t *testing.T) {
 				if err != nil {
 					require.NoError(t, err)
 				}
-				w.Write(data)
+				_, err = w.Write(data)
+				require.NoError(t, err)
 			} else {
 				http.Error(w, "wrong path", http.StatusBadRequest)
 			}
@@ -175,7 +177,8 @@ func TestResolve(t *testing.T) {
 			if err != nil {
 				require.NoError(t, err)
 			}
-			w.Write(data)
+			_, err = w.Write(data)
+			require.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -212,7 +215,8 @@ func TestResolve(t *testing.T) {
 
 		initLogger()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			io.WriteString(w, "invalid-json")
+			_, err := io.WriteString(w, "invalid-json")
+			require.NoError(t, err)
 		}))
 		defer server.Close()
 

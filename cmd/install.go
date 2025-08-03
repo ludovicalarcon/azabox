@@ -79,7 +79,9 @@ func installBinary(binaryInfo *dto.BinaryInfo) error {
 		return err
 	}
 
-	downloader.Install(binaryInfo, resolvedUrl)
+	if err = downloader.Install(binaryInfo, resolvedUrl); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -91,6 +93,7 @@ func newInstallCommand() *cobra.Command {
 		Short: InstallShortMessage,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) == 0 {
+				_ = cmd.Help()
 				return errors.New("install need at least one argument, see above usage")
 			}
 
@@ -105,6 +108,7 @@ func newInstallCommand() *cobra.Command {
 			return nil
 		},
 		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 
 	cmd.Flags().StringVarP(&version, "version", "v",
