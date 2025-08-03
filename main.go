@@ -1,7 +1,16 @@
 package main
 
-import "gitlab.com/ludovic-alarcon/azabox/cmd"
+import (
+	"fmt"
+	"os"
+
+	"gitlab.com/ludovic-alarcon/azabox/cmd"
+)
 
 func main() {
-	_ = cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		fmt.Printf("\nError: %v\n", err)
+		os.Exit(1)
+	}
 }

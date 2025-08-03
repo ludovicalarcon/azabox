@@ -90,6 +90,48 @@ func TestCreateZapConfig(t *testing.T) {
 		assert.Equal(t, expected.FunctionKey, got.EncoderConfig.FunctionKey)
 		assert.Equal(t, expected.StacktraceKey, got.EncoderConfig.StacktraceKey)
 	})
+
+	t.Run("should activate stacktrace and caller only in debug log-level", func(t *testing.T) {
+		t.Cleanup(func() {
+			LogLevel = ""
+		})
+
+		testcases := []struct {
+			name     string
+			disabled bool
+			logLevel string
+		}{
+			{
+				name:     "logLevel debug should have stacktrace",
+				disabled: false,
+				logLevel: "debug",
+			},
+			{
+				name:     "logLevel info should not have stacktrace",
+				disabled: true,
+				logLevel: "info",
+			},
+			{
+				name:     "logLevel warn should not have stacktrace",
+				disabled: true,
+				logLevel: "warn",
+			},
+			{
+				name:     "logLevel warn should not have stacktrace",
+				disabled: true,
+				logLevel: "error",
+			},
+		}
+
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				LogLevel = tc.logLevel
+				cfg := createZapConfig(Config{Encoding: Console})
+				assert.Equal(t, tc.disabled, cfg.DisableStacktrace)
+				assert.Equal(t, tc.disabled, cfg.DisableCaller)
+			})
+		}
+	})
 }
 
 func TestInitLogger(t *testing.T) {
@@ -121,13 +163,14 @@ func TestInitLogger(t *testing.T) {
 		require.NotNil(t, Logger.Desugar())
 
 		Logger.Debug(expectLogMessage)
-		Logger.Sync()
+		_ = Logger.Sync()
 		w.Close()
 		os.Stdout = saveStdout
 
 		// read captured output
 		var buff bytes.Buffer
-		io.Copy(&buff, r)
+		_, err = io.Copy(&buff, r)
+		require.NoError(t, err)
 		r.Close()
 
 		output := buff.String()
