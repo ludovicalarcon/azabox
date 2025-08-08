@@ -9,6 +9,7 @@ vars:
   GOLANGCI_LINT: "{{.TOOLS_FOLDER}}/golangci-lint"
   GOSEC_VERSION: v2.22.4
   GOSEC: "{{.TOOLS_FOLDER}}/gosec"
+  GOVULNCHECK: "{{.TOOLS_FOLDER}}/govulncheck"
 
 tasks:
   default:
@@ -82,6 +83,12 @@ tasks:
       - task: golangci-lint
       - "{{.GOLANGCI_LINT}} run --fix"
 
+  vuln:
+    desc: run govulncheck
+    cmds:
+      - task: govulncheck
+      - "{{.GOVULNCHECK}} ./..."
+
   sec:
     desc: run gosec
     cmds:
@@ -104,3 +111,9 @@ tasks:
     desc: install gosec
     cmds:
       - GOBIN={{.TOOLS_FOLDER}} go install github.com/securego/gosec/v2/cmd/gosec@{{.GOSEC_VERSION}}
+
+  govulncheck:
+    internal: true
+    desc: install govulncheck
+    cmds:
+      - GOBIN={{.TOOLS_FOLDER}} go install golang.org/x/vuln/cmd/govulncheck@latest
