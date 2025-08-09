@@ -3,6 +3,8 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -10,6 +12,7 @@ import (
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
+	"gitlab.com/ludovic-alarcon/azabox/internal/state"
 )
 
 const (
@@ -55,6 +58,17 @@ func installBinary(binaryInfo *dto.BinaryInfo) error {
 		binaryInfo.Owner, "version", binaryInfo.Version)
 	fmt.Printf("Installing binary \"%s\" with version \"%s\"\n", binaryInfo.FullName, binaryInfo.Version)
 
+	azaState := state.NewState(filepath.Clean(
+		filepath.Join(state.StateDirectory(), "state.json")))
+	err := azaState.Load()
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	if azaState.Has(binaryInfo.FullName) {
+		return errors.New("binary already installed, use update command to download newer version")
+	}
+
 	resolvers := resolver.GetRegistryResolver().GetResolvers()
 	resolvedUrl := ""
 	for resolver := range resolvers {
@@ -71,7 +85,7 @@ func installBinary(binaryInfo *dto.BinaryInfo) error {
 		logging.Logger.Debugw("Binary not found", "binary", binaryInfo.Name, "owner",
 			binaryInfo.Owner, "version", binaryInfo.Version)
 		fmt.Printf("Binary \"%s\" with version \"%s\" not found\n", binaryInfo.FullName, binaryInfo.Version)
-		return nil
+		return azaState.Save()
 	}
 
 	downloader, err := downloader.New()
@@ -82,7 +96,9 @@ func installBinary(binaryInfo *dto.BinaryInfo) error {
 	if err = downloader.Install(binaryInfo, resolvedUrl); err != nil {
 		return err
 	}
-	return nil
+
+	azaState.UpdateEntrie(*binaryInfo)
+	return azaState.Save()
 }
 
 func newInstallCommand() *cobra.Command {

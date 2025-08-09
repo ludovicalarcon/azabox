@@ -92,7 +92,8 @@ func (d *Downloader) downloadToTmpDir(binaryInfo *dto.BinaryInfo, url string) (s
 	}
 
 	tmpFileName := fmt.Sprintf("azabox-%s", getFileName(url))
-	tempFile, err := os.Create(filepath.Join(d.tmpFolder, tmpFileName))
+	tempFile, err := os.Create(filepath.Clean(
+		filepath.Join(d.tmpFolder, tmpFileName)))
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +116,7 @@ func (d *Downloader) installBinary(binaryInfo *dto.BinaryInfo, tmpPath string) (
 		tmpPath = extracted
 	}
 
-	in, err := os.Open(tmpPath)
+	in, err := os.Open(filepath.Clean(tmpPath))
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +127,7 @@ func (d *Downloader) installBinary(binaryInfo *dto.BinaryInfo, tmpPath string) (
 	}
 
 	targetPath := filepath.Join(d.installFolder, fmt.Sprintf("%s-%s", binaryInfo.Name, binaryInfo.InstalledVersion))
-	out, err := os.Create(targetPath)
+	out, err := os.Create(filepath.Clean(targetPath))
 	if err != nil {
 		return "", err
 	}
@@ -167,7 +168,7 @@ func extractZip(path, binaryName string) (string, error) {
 				return "", err
 			}
 			defer rc.Close()
-			outFile, err := os.Create(outPath)
+			outFile, err := os.Create(filepath.Clean(outPath))
 			if err != nil {
 				return "", err
 			}
@@ -182,7 +183,7 @@ func extractZip(path, binaryName string) (string, error) {
 }
 
 func extractTarGz(path, tool string) (string, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
 		return "", err
 	}
@@ -206,7 +207,7 @@ func extractTarGz(path, tool string) (string, error) {
 		}
 		if strings.Contains(hdr.Name, tool) {
 			outPath := filepath.Join(tempDir, tool)
-			outFile, err := os.Create(outPath)
+			outFile, err := os.Create(filepath.Clean(outPath))
 			if err != nil {
 				return "", err
 			}
