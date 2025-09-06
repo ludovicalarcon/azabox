@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
+	"gitlab.com/ludovic-alarcon/azabox/internal/state"
 )
 
 func initLogger() {
@@ -38,13 +41,47 @@ func TestInstallCommand(t *testing.T) {
 			logging.Logger = nil
 		})
 
+		tmpDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", tmpDir)
+		t.Setenv("HOME", tmpDir)
+
 		initLogger()
 		cmd := newInstallCommand()
+
 		err := cmd.RunE(cmd, []string{"foo"})
 		assert.NoError(t, err)
 
 		err = cmd.RunE(cmd, []string{"foo", "bar"})
 		assert.NoError(t, err)
+	})
+
+	t.Run("should return an error when binary already present in state", func(t *testing.T) {
+		t.Cleanup(func() {
+			logging.LogLevel = ""
+			logging.Logger = nil
+		})
+
+		tmpDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", tmpDir)
+		t.Setenv("HOME", tmpDir)
+
+		initLogger()
+		azastate := state.NewState(filepath.Clean(
+			filepath.Join(state.StateDirectory(), "state.json")))
+		name, version := "foo", "latest"
+		binaryInfo := dto.BinaryInfo{
+			FullName: name + "/" + name,
+			Version:  version, Name: name, Owner: name, InstalledVersion: version,
+		}
+
+		azastate.UpdateEntrie(binaryInfo)
+		err := azastate.Save()
+		require.NoError(t, err)
+
+		cmd := newInstallCommand()
+		err = cmd.RunE(cmd, []string{name})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "binary already installed")
 	})
 }
 

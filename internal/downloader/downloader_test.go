@@ -201,6 +201,9 @@ func TestDownloader_InstallBinary(t *testing.T) {
 		})
 
 		tmpDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", tmpDir)
+		t.Setenv("HOME", tmpDir)
+
 		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
@@ -226,6 +229,9 @@ func TestDownloader_InstallBinary(t *testing.T) {
 		})
 
 		tmpDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", tmpDir)
+		t.Setenv("HOME", tmpDir)
+
 		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
@@ -262,6 +268,9 @@ func TestDownloader_InstallBinary(t *testing.T) {
 		})
 
 		tmpDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", tmpDir)
+		t.Setenv("HOME", tmpDir)
+
 		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
@@ -301,6 +310,9 @@ func TestDownloader_InstallBinary(t *testing.T) {
 		})
 
 		tmpDir := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", tmpDir)
+		t.Setenv("HOME", tmpDir)
+
 		err := os.Chmod(tmpDir, 0o400)
 		require.NoError(t, err)
 		initLogger()
