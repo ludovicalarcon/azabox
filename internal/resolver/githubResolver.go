@@ -85,6 +85,7 @@ func (r *GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 	archNormalized := platform.NormalizeArch(arch)
+	logging.Logger.Debugw("os info", "os", os, "arch", arch, "normalized", archNormalized)
 
 	for _, asset := range data.Assets {
 		downloadURL := strings.ToLower(asset.Url)
