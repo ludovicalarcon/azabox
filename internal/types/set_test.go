@@ -278,8 +278,8 @@ func TestSet_String(t *testing.T) {
 			// and in go map doesn't have a deterministic order
 			{
 				name:     "values",
-				set:      SetFromSlice([]string{"foo", "bar", "toto"}),
-				expected: "{foo bar toto}",
+				set:      SetFromSlice([]string{"foo"}),
+				expected: "{foo}",
 			},
 		}
 

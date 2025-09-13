@@ -12,6 +12,8 @@ import (
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
 )
 
+const StateFileName = "state.json"
+
 type State struct {
 	path     string
 	file     *os.File

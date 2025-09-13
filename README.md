@@ -62,13 +62,24 @@ Coming Soon
 
 ### Listing all Binaries installed
 
-Coming Soon
+To list all binaries installed for the current user, run the `list command`
+
+Example
+
+```bash
+azabox list
+
+Binaries installed:
+- helmfile in version v1.1.6
+- stern in version v1.32.0
+- norwoodj/helm-docs in version v1.14.2
+```
 
 ## State file
 
 The state file location depends of the OS
 
-- Unix: `$XDG_CONFIG_HOME/azabox\state.json`  
+- Unix: `$XDG_CONFIG_HOME/azabox/state.json`
 (if XDG_CONFIG_HOME is not defined, it fallback on $HOME)
 - MacOS: `$HOME/Library/Application Support/azabox/state.json`
 - Windows: `%AppData%\azabox\state.json`
