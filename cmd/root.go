@@ -31,6 +31,7 @@ func Execute() error {
 	}()
 
 	rootCmd.AddCommand(newInstallCommand())
+	rootCmd.AddCommand(newListCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		return err
