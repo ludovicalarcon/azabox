@@ -161,7 +161,11 @@ func extractZip(path, binaryName string) (string, error) {
 
 	tempDir := os.TempDir()
 	for _, f := range r.File {
-		if strings.Contains(f.Name, binaryName) {
+		fileName := f.Name
+		if tmp := strings.Split(fileName, "/"); len(tmp) > 1 {
+			fileName = tmp[1]
+		}
+		if strings.Contains(fileName, binaryName) {
 			outPath := filepath.Join(tempDir, binaryName)
 			rc, err := f.Open()
 			if err != nil {
@@ -205,7 +209,12 @@ func extractTarGz(path, tool string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if strings.Contains(hdr.Name, tool) {
+		fileName := hdr.Name
+		if tmp := strings.Split(fileName, "/"); len(tmp) > 1 {
+			fileName = tmp[1]
+		}
+		if strings.Contains(fileName, tool) {
+			logging.Logger.Debugw("copy binary", "name", hdr.Name)
 			outPath := filepath.Join(tempDir, tool)
 			outFile, err := os.Create(filepath.Clean(outPath))
 			if err != nil {
