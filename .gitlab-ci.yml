@@ -1,0 +1,77 @@
+variables:
+  BINARY_NAME: azabox
+  GO_VERSION: 1.24
+  LINUX_BIN: $BINARY_NAME-linux-amd64
+  DARWIN_BIN: $BINARY_NAME-darwin-amd64
+
+image: golang:${GO_VERSION}
+
+before_script:
+  - apt-get update && apt-get install -y curl unzip jq
+  - sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d
+  - pwd
+  - export PATH="$PWD/bin:$PATH"
+
+stages:
+  - lint
+  - module-verify
+  - vuln
+  - test
+  - build
+  - release
+
+lint:
+  stage: lint
+  script:
+    - task lint
+  rules:
+    - when: always
+
+module-verify:
+  stage: module-verify
+  script:
+    - task module-verify
+  rules:
+    - when: always
+
+vuln:
+  stage: vuln
+  script:
+    - task vuln
+  rules:
+    - when: always
+
+test:
+  stage: test
+  script:
+    - task test
+    - task coverage
+  coverage: '/total:\s+\(statements\)\s+\d+.\d+%/'
+  rules:
+    - when: always
+
+build:
+  stage: build
+  script:
+    - task build:linux
+    - task build:darwin
+  artifacts:
+    paths:
+      - $LINUX_BIN
+      - $DARWIN_BIN
+    expire_in: 1 hour
+  rules:
+    - when: always
+
+release:
+  stage: release
+  rules:
+    - if: "$CI_COMMIT_TAG"
+  image: gitlab/glab:latest
+  script:
+    - echo "Release CI_COMMIT_TAG"
+    - echo "TOKEN $CICD_TOKEN"
+    - glab auth login --token $CICD_TOKEN --hostname $CI_SERVER_HOST
+    - glab release create $CI_COMMIT_TAG
+    - glab release upload $CI_COMMIT_TAG $LINUX_BIN
+    - glab release upload $CI_COMMIT_TAG $DARWIN_BIN
