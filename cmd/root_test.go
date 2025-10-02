@@ -98,4 +98,10 @@ func TestRootCmd(t *testing.T) {
 		assert.NotEmpty(t, output)
 		assert.Contains(t, output, expectedContains)
 	})
+
+	t.Run("should execute", func(t *testing.T) {
+		rootCmd.SetArgs([]string{"list"})
+		err := Execute()
+		assert.NoError(t, err)
+	})
 }

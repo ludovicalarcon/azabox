@@ -1,4 +1,4 @@
-package downloader
+package installer
 
 import (
 	"archive/tar"
@@ -17,7 +17,11 @@ import (
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 )
 
-type Downloader struct {
+type Installer interface {
+	Install(binaryInfo *dto.BinaryInfo, url string) error
+}
+
+type LocalInstaller struct {
 	tmpFolder     string
 	installFolder string
 }
@@ -39,44 +43,44 @@ func getFileName(rawURL string) string {
 	return path.Base(parsed.Path)
 }
 
-func New() (*Downloader, error) {
+func New() (*LocalInstaller, error) {
 	installFolder, err := getUserLocalBinaryFolder()
 	if err != nil {
 		return nil, err
 	}
-	return &Downloader{
+	return &LocalInstaller{
 		tmpFolder:     os.TempDir(),
 		installFolder: installFolder,
 	}, nil
 }
 
-func (d *Downloader) WithInstallFolder(binaryPath string) *Downloader {
-	d.installFolder = binaryPath
-	return d
+func (l *LocalInstaller) WithInstallFolder(binaryPath string) *LocalInstaller {
+	l.installFolder = binaryPath
+	return l
 }
 
-func (d *Downloader) WithTmpFolder(tmpPath string) *Downloader {
-	d.tmpFolder = tmpPath
-	return d
+func (l *LocalInstaller) WithTmpFolder(tmpPath string) *LocalInstaller {
+	l.tmpFolder = tmpPath
+	return l
 }
 
-func (d *Downloader) Install(binaryInfo *dto.BinaryInfo, url string) error {
-	tmpFile, err := d.downloadToTmpDir(binaryInfo, url)
+func (l *LocalInstaller) Install(binaryInfo *dto.BinaryInfo, url string) error {
+	tmpFile, err := l.downloadToTmpDir(binaryInfo, url)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
-	targetPath, err := d.installBinary(binaryInfo, tmpFile)
+	targetPath, err := l.installBinary(binaryInfo, tmpFile)
 	if err != nil {
 		return fmt.Errorf("install failed: %w", err)
 	}
-	if err := d.createSymlink(binaryInfo, targetPath); err != nil {
+	if err := l.createSymlink(binaryInfo, targetPath); err != nil {
 		return fmt.Errorf("symlink creation failed: %w", err)
 	}
 	fmt.Println("Installed to " + targetPath)
 	return nil
 }
 
-func (d *Downloader) downloadToTmpDir(binaryInfo *dto.BinaryInfo, url string) (string, error) {
+func (l *LocalInstaller) downloadToTmpDir(binaryInfo *dto.BinaryInfo, url string) (string, error) {
 	logging.Logger.Debugw("Downloading", "url", url, "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.InstalledVersion)
 	fmt.Printf("Downloading %s - %s\n", binaryInfo.FullName, binaryInfo.InstalledVersion)
@@ -93,7 +97,7 @@ func (d *Downloader) downloadToTmpDir(binaryInfo *dto.BinaryInfo, url string) (s
 
 	tmpFileName := fmt.Sprintf("azabox-%s", getFileName(url))
 	tempFile, err := os.Create(filepath.Clean(
-		filepath.Join(d.tmpFolder, tmpFileName)))
+		filepath.Join(l.tmpFolder, tmpFileName)))
 	if err != nil {
 		return "", err
 	}
@@ -107,7 +111,7 @@ func (d *Downloader) downloadToTmpDir(binaryInfo *dto.BinaryInfo, url string) (s
 	return tempFile.Name(), nil
 }
 
-func (d *Downloader) installBinary(binaryInfo *dto.BinaryInfo, tmpPath string) (string, error) {
+func (l *LocalInstaller) installBinary(binaryInfo *dto.BinaryInfo, tmpPath string) (string, error) {
 	if isArchiveFormat(tmpPath) {
 		extracted, err := extractArchive(tmpPath, binaryInfo.Name)
 		if err != nil {
@@ -122,11 +126,11 @@ func (d *Downloader) installBinary(binaryInfo *dto.BinaryInfo, tmpPath string) (
 	}
 	defer in.Close()
 
-	if err := os.MkdirAll(d.installFolder, 0o750); err != nil {
+	if err := os.MkdirAll(l.installFolder, 0o750); err != nil {
 		return "", err
 	}
 
-	targetPath := filepath.Join(d.installFolder, fmt.Sprintf("%s-%s", binaryInfo.Name, binaryInfo.InstalledVersion))
+	targetPath := filepath.Join(l.installFolder, fmt.Sprintf("%s-%s", binaryInfo.Name, binaryInfo.InstalledVersion))
 	out, err := os.Create(filepath.Clean(targetPath))
 	if err != nil {
 		return "", err
@@ -230,7 +234,7 @@ func extractTarGz(path, tool string) (string, error) {
 	return "", fmt.Errorf("no matching binary found in tar.gz")
 }
 
-func (d *Downloader) createSymlink(binaryInfo *dto.BinaryInfo, target string) error {
+func (d *LocalInstaller) createSymlink(binaryInfo *dto.BinaryInfo, target string) error {
 	symLinkPath := filepath.Join(d.installFolder, binaryInfo.Name)
 	logging.Logger.Debugw("creating symlink", "path", symLinkPath)
 	_ = os.Remove(symLinkPath)

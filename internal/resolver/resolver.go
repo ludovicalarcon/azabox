@@ -45,6 +45,12 @@ func (r *RegistryResolver) Register(resolver Resolver) {
 	r.resolvers.Add(resolver)
 }
 
+func (r *RegistryResolver) Unregister(resolver Resolver) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.resolvers.Remove(resolver)
+}
+
 func (r *RegistryResolver) GetResolvers() types.Set[Resolver] {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()

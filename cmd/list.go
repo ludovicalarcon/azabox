@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -16,12 +15,12 @@ const (
 	ListShortMessage = "list installed binaries for current user"
 )
 
-func newListCommand() *cobra.Command {
+func newListCommand(azaState state.State) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   ListUseMessage,
 		Short: ListShortMessage,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			list, err := executeListCommand()
+			list, err := executeListCommand(azaState)
 			fmt.Println(list)
 			return err
 		},
@@ -32,20 +31,18 @@ func newListCommand() *cobra.Command {
 	return cmd
 }
 
-func executeListCommand() (string, error) {
-	azaState := state.NewState(filepath.Clean(
-		filepath.Join(state.StateDirectory(), state.StateFileName)))
+func executeListCommand(azaState state.State) (string, error) {
 	err := azaState.Load()
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
 
 	var sb strings.Builder
-	if len(azaState.Binaries) == 0 {
+	if len(azaState.Entries()) == 0 {
 		sb.WriteString("No binary installed\n")
 	} else {
 		sb.WriteString("Binaries installed:\n")
-		for _, binary := range azaState.Binaries {
+		for _, binary := range azaState.Entries() {
 			sb.WriteString(fmt.Sprintf("- %s\n", binary.String()))
 		}
 	}

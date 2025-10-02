@@ -173,6 +173,23 @@ func TestSave(t *testing.T) {
 	})
 }
 
+func TestEntries(t *testing.T) {
+	t.Run("should return all the binaries present in state", func(t *testing.T) {
+		state := NewState("foo.json")
+
+		name, anotherName, version := testBinaryName, "another-bin", testBinaryVersion
+		binaryInfo := dto.BinaryInfo{FullName: name, Version: version, Name: name, Owner: name, InstalledVersion: version}
+
+		require.Empty(t, state.Binaries)
+		state.UpdateEntrie(binaryInfo)
+		binaryInfo.FullName = anotherName
+		state.UpdateEntrie(binaryInfo)
+
+		entries := state.Entries()
+		require.Len(t, entries, 2)
+	})
+}
+
 func TestStateDirectory(t *testing.T) {
 	t.Run("should return user config dir", func(t *testing.T) {
 		tmpDir := t.TempDir()

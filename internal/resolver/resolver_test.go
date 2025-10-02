@@ -21,15 +21,19 @@ func TestRegistry(t *testing.T) {
 		assert.Len(t, registry.resolvers, 0)
 	})
 
-	t.Run("should register and return resolver list", func(t *testing.T) {
+	t.Run("should register/unregister and return resolver list", func(t *testing.T) {
 		registry := newRegistryResolver()
 		dummyResolver := &DummyResolver{}
 
 		registry.Register(dummyResolver)
 
 		resolvers := registry.GetResolvers()
-		require.Len(t, resolvers, 1)
+		require.Len(t, resolvers, 1, "register should be register")
 		assert.Equal(t, dummyResolver, resolvers.ToSlice()[0])
+
+		registry.Unregister(dummyResolver)
+		resolvers = registry.GetResolvers()
+		assert.Len(t, resolvers, 0, "resolver should be unregister")
 	})
 
 	t.Run("should not register duplicate", func(t *testing.T) {

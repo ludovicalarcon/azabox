@@ -14,58 +14,66 @@ import (
 
 const StateFileName = "state.json"
 
-type State struct {
+type State interface {
+	Load() error
+	Save() error
+	UpdateEntrie(dto.BinaryInfo)
+	Has(string) bool
+	Entries() map[string]dto.BinaryInfo
+}
+
+type LocalState struct {
 	path     string
 	file     *os.File
 	Binaries map[string]dto.BinaryInfo
 }
 
-func NewState(path string) *State {
-	return &State{
+func NewState(path string) *LocalState {
+	return &LocalState{
 		path:     path,
 		Binaries: make(map[string]dto.BinaryInfo),
 	}
 }
 
-func (s *State) Load() error {
-	file, err := os.OpenFile(s.path, os.O_CREATE, 0o644)
+func (l *LocalState) Load() error {
+	file, err := os.OpenFile(l.path, os.O_CREATE, 0o644)
 	if err != nil {
 		return err
 	}
-	s.file = file
+	l.file = file
 
-	if err := syscall.Flock(int(s.file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		s.file.Close()
+	if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		l.file.Close()
 		return errors.New("another install/update command is currently running, try again later")
 	}
 
 	var binaries []dto.BinaryInfo
 	err = json.NewDecoder(file).Decode(&binaries)
 	if err != nil && !errors.Is(err, io.EOF) {
-		s.file.Close()
+		l.file.Close()
 		return err
 	}
 
 	for _, binaryInfo := range binaries {
-		s.Binaries[binaryInfo.FullName] = binaryInfo
+		l.Binaries[binaryInfo.FullName] = binaryInfo
 	}
 
 	return nil
 }
 
-func (s *State) UpdateEntrie(binaryInfo dto.BinaryInfo) {
-	s.Binaries[binaryInfo.FullName] = binaryInfo
+func (l *LocalState) UpdateEntrie(binaryInfo dto.BinaryInfo) {
+	l.Binaries[binaryInfo.FullName] = binaryInfo
 }
 
-func (s *State) Save() error {
-	tmpPath := s.path + ".tmp"
+func (l *LocalState) Save() error {
+	tmpPath := l.path + ".tmp"
 	file, err := os.Create(filepath.Clean(tmpPath))
 	if err != nil {
 		return err
 	}
 
-	binaries := make([]dto.BinaryInfo, 0, len(s.Binaries))
-	for _, binary := range s.Binaries {
+	binaries := make([]dto.BinaryInfo, 0, len(l.Binaries))
+	for _, binary := range l.Binaries {
 		binaries = append(binaries, binary)
 	}
 
@@ -83,20 +91,24 @@ func (s *State) Save() error {
 		return closeErr
 	}
 
-	if err := os.Rename(tmpPath, s.path); err != nil {
+	if err := os.Rename(tmpPath, l.path); err != nil {
 		return err
 	}
 
-	if s.file != nil {
-		_ = syscall.Flock(int(s.file.Fd()), syscall.LOCK_UN)
-		return s.file.Close()
+	if l.file != nil {
+		_ = syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN)
+		return l.file.Close()
 	}
 	return nil
 }
 
-func (s *State) Has(binaryName string) bool {
-	_, ok := s.Binaries[binaryName]
+func (l *LocalState) Has(binaryName string) bool {
+	_, ok := l.Binaries[binaryName]
 	return ok
+}
+
+func (l *LocalState) Entries() map[string]dto.BinaryInfo {
+	return l.Binaries
 }
 
 func StateDirectory() string {

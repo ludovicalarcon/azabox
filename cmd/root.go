@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"path/filepath"
+
 	"github.com/spf13/cobra"
+	"gitlab.com/ludovic-alarcon/azabox/internal/installer"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
+	"gitlab.com/ludovic-alarcon/azabox/internal/state"
 )
 
 const (
@@ -23,6 +27,20 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func setupCommands() error {
+	azaInstaller, err := installer.New()
+	if err != nil {
+		return err
+	}
+	azaState := state.NewState(filepath.Clean(
+		filepath.Join(state.StateDirectory(), state.StateFileName)))
+
+	rootCmd.AddCommand(newInstallCommand(azaInstaller, azaState))
+	rootCmd.AddCommand(newListCommand(azaState))
+
+	return nil
+}
+
 func Execute() error {
 	defer func() {
 		if logging.Logger != nil {
@@ -30,8 +48,9 @@ func Execute() error {
 		}
 	}()
 
-	rootCmd.AddCommand(newInstallCommand())
-	rootCmd.AddCommand(newListCommand())
+	if err := setupCommands(); err != nil {
+		return err
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		return err

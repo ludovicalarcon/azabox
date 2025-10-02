@@ -2,23 +2,28 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
+	"gitlab.com/ludovic-alarcon/azabox/internal/installer"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
-	"gitlab.com/ludovic-alarcon/azabox/internal/state"
+	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
 )
 
-func initLogger() {
+func initLoggerForTest() {
 	_ = logging.InitLogger(logging.Config{Encoding: logging.Json})
 }
 
 func TestNewInstallCommand(t *testing.T) {
 	t.Run("should create a new install command", func(t *testing.T) {
-		cmd := newInstallCommand()
+		localInstaller, err := installer.New()
+		dummyState := &DummyState{}
+		require.NoError(t, err)
+		require.NotNil(t, localInstaller)
+
+		cmd := newInstallCommand(localInstaller, dummyState)
 
 		require.NotNil(t, cmd)
 		assert.Equal(t, InstallUseMessage, cmd.Use)
@@ -30,9 +35,15 @@ func TestNewInstallCommand(t *testing.T) {
 
 func TestInstallCommand(t *testing.T) {
 	t.Run("should return an error when there is less than one args provided", func(t *testing.T) {
-		cmd := newInstallCommand()
-		err := cmd.RunE(cmd, []string{})
-		assert.Error(t, err)
+		localInstaller, err := installer.New()
+		dummyState := &DummyState{}
+		require.NoError(t, err)
+		require.NotNil(t, localInstaller)
+
+		cmd := newInstallCommand(localInstaller, dummyState)
+		err = cmd.RunE(cmd, []string{})
+		require.Error(t, err)
+		assert.Equal(t, ArgsCountErrorMessage, err.Error())
 	})
 
 	t.Run("should not return an error when there is at least one args provided", func(t *testing.T) {
@@ -41,14 +52,15 @@ func TestInstallCommand(t *testing.T) {
 			logging.Logger = nil
 		})
 
-		tmpDir := t.TempDir()
-		t.Setenv("XDG_CONFIG_HOME", tmpDir)
-		t.Setenv("HOME", tmpDir)
+		initLoggerForTest()
+		dummyState := &DummyState{}
+		localInstaller, err := installer.New()
+		require.NoError(t, err)
+		require.NotNil(t, localInstaller)
 
-		initLogger()
-		cmd := newInstallCommand()
+		cmd := newInstallCommand(localInstaller, dummyState)
 
-		err := cmd.RunE(cmd, []string{"foo"})
+		err = cmd.RunE(cmd, []string{"foo"})
 		assert.NoError(t, err)
 
 		err = cmd.RunE(cmd, []string{"foo", "bar"})
@@ -61,27 +73,132 @@ func TestInstallCommand(t *testing.T) {
 			logging.Logger = nil
 		})
 
-		tmpDir := t.TempDir()
-		t.Setenv("XDG_CONFIG_HOME", tmpDir)
-		t.Setenv("HOME", tmpDir)
-
-		initLogger()
-		azastate := state.NewState(filepath.Clean(
-			filepath.Join(state.StateDirectory(), "state.json")))
+		initLoggerForTest()
+		localInstaller, err := installer.New()
+		require.NoError(t, err)
+		require.NotNil(t, localInstaller)
+		dummyState := &DummyState{
+			binaries: make(map[string]dto.BinaryInfo, 1),
+		}
 		name, version := "foo", "latest"
 		binaryInfo := dto.BinaryInfo{
 			FullName: name + "/" + name,
 			Version:  version, Name: name, Owner: name, InstalledVersion: version,
 		}
 
-		azastate.UpdateEntrie(binaryInfo)
-		err := azastate.Save()
+		dummyState.UpdateEntrie(binaryInfo)
+		err = dummyState.Save()
 		require.NoError(t, err)
 
-		cmd := newInstallCommand()
+		cmd := newInstallCommand(localInstaller, dummyState)
 		err = cmd.RunE(cmd, []string{name})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "binary already installed")
+	})
+}
+
+func TestInstallBinary(t *testing.T) {
+	t.Run("should handle error on state failed", func(t *testing.T) {
+		t.Cleanup(func() {
+			logging.LogLevel = ""
+			logging.Logger = nil
+		})
+
+		initLoggerForTest()
+		dummyState := &DummyState{onError: true}
+		localInstaller, err := installer.New()
+		require.NoError(t, err)
+		require.NotNil(t, localInstaller)
+		cfg := InstallConfig{
+			azaInstaller: localInstaller,
+			azaState:     dummyState,
+		}
+		binaryInfo := dto.BinaryInfo{
+			FullName: TestBinaryFullName,
+			Name:     TestBinaryName,
+			Owner:    TestBinaryName,
+			Version:  TestBinaryVersion,
+		}
+
+		err = installBinary(&binaryInfo, cfg)
+
+		require.Error(t, err)
+		assert.Equal(t, DummyStateErrorMessage, err.Error())
+		assert.Equal(t, 0, dummyState.saveCount)
+	})
+
+	t.Run("should resolve url and install binary", func(t *testing.T) {
+		t.Cleanup(func() {
+			logging.LogLevel = ""
+			logging.Logger = nil
+		})
+
+		initLoggerForTest()
+		dummyState := &DummyState{
+			binaries: make(map[string]dto.BinaryInfo, 1),
+		}
+		dummyInstaller := &DummyInstaller{}
+		dummyResolver := &DummyResolver{}
+		cfg := InstallConfig{
+			azaInstaller: dummyInstaller,
+			azaState:     dummyState,
+		}
+		binaryInfo := dto.BinaryInfo{
+			FullName: TestBinaryFullName,
+			Name:     TestBinaryName,
+			Owner:    TestBinaryName,
+			Version:  TestBinaryVersion,
+		}
+		resolver.GetRegistryResolver().Register(dummyResolver)
+
+		err := installBinary(&binaryInfo, cfg)
+		resolver.GetRegistryResolver().Unregister(dummyResolver)
+
+		assert.NoError(t, err)
+		assert.Equal(t, 1, dummyResolver.resolveCount,
+			"should have called resolve method once")
+		assert.Equal(t, 1, dummyInstaller.installCount,
+			"should have called install method once")
+		assert.Equal(t, 1, dummyState.saveCount,
+			"should have called save method once")
+		assert.True(t, dummyState.Has(binaryInfo.FullName), "binary should be present in state")
+	})
+
+	t.Run("should handle error", func(t *testing.T) {
+		t.Cleanup(func() {
+			logging.LogLevel = ""
+			logging.Logger = nil
+		})
+
+		initLoggerForTest()
+		dummyState := &DummyState{}
+		dummyInstaller := &DummyInstaller{onError: true}
+		dummyResolver := &DummyResolver{}
+		cfg := InstallConfig{
+			azaInstaller: dummyInstaller,
+			azaState:     dummyState,
+		}
+		binaryInfo := dto.BinaryInfo{
+			FullName: TestBinaryFullName,
+			Name:     TestBinaryName,
+			Owner:    TestBinaryName,
+			Version:  TestBinaryVersion,
+		}
+		resolver.GetRegistryResolver().Register(dummyResolver)
+
+		err := installBinary(&binaryInfo, cfg)
+		resolver.GetRegistryResolver().Unregister(dummyResolver)
+
+		require.Error(t, err)
+		assert.Equal(t, DummyInstallerErrorMessage, err.Error())
+		assert.Equal(t, 1, dummyResolver.resolveCount,
+			"should have called resolve method once")
+		assert.Equal(t, 1, dummyInstaller.installCount,
+			"should have called install method once")
+		assert.Equal(t, 0, dummyState.saveCount,
+			"should not have called save method")
+		assert.False(t, dummyState.Has(binaryInfo.FullName),
+			"binary should not be present in state")
 	})
 }
 

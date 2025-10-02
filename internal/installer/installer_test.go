@@ -1,4 +1,4 @@
-package downloader
+package installer
 
 import (
 	"archive/tar"

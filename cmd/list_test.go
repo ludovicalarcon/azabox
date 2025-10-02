@@ -1,29 +1,28 @@
 package cmd
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
-	"gitlab.com/ludovic-alarcon/azabox/internal/state"
 )
 
-func createFakeState(binaries []dto.BinaryInfo) error {
-	azaState := state.NewState(filepath.Clean(
-		filepath.Join(state.StateDirectory(), state.StateFileName)))
+func createFakeState(binaries []dto.BinaryInfo) *DummyState {
+	dummyState := &DummyState{
+		binaries: make(map[string]dto.BinaryInfo, len(binaries)),
+	}
 
 	for _, binaryInfo := range binaries {
-		azaState.UpdateEntrie(binaryInfo)
+		dummyState.UpdateEntrie(binaryInfo)
 	}
-	return azaState.Save()
+	return dummyState
 }
 
 func TestNewListCommand(t *testing.T) {
 	t.Run("should create a new list command", func(t *testing.T) {
-		cmd := newListCommand()
+		dummyState := &DummyState{}
+		cmd := newListCommand(dummyState)
 
 		require.NotNil(t, cmd)
 		assert.Equal(t, ListUseMessage, cmd.Use)
@@ -68,14 +67,9 @@ func TestExecuteListCommand(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				tmpDir := t.TempDir()
-				t.Setenv("XDG_CONFIG_HOME", tmpDir)
-				t.Setenv("HOME", tmpDir)
+				dummyState := createFakeState(tc.binaries)
 
-				err := createFakeState(tc.binaries)
-				require.NoError(t, err)
-
-				got, errList := executeListCommand()
+				got, errList := executeListCommand(dummyState)
 				require.NoError(t, errList)
 
 				for _, expected := range tc.expected {
@@ -86,20 +80,14 @@ func TestExecuteListCommand(t *testing.T) {
 	})
 
 	t.Run("should handle error", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		t.Setenv("XDG_CONFIG_HOME", tmpDir)
-		t.Setenv("HOME", tmpDir)
+		dummyState := createFakeState([]dto.BinaryInfo{})
+		dummyState.onError = true
 
-		statePath := filepath.Clean(
-			filepath.Join(state.StateDirectory(), state.StateFileName))
-		err := os.WriteFile(statePath, []byte("{foo:"), 0o600)
-		require.NoError(t, err)
-
-		got, errCmd := executeListCommand()
+		got, errCmd := executeListCommand(dummyState)
 		require.Error(t, errCmd)
 		assert.Empty(t, got)
 
-		cmd := newListCommand()
+		cmd := newListCommand(dummyState)
 		errCmd = cmd.RunE(cmd, []string{})
 		assert.Error(t, errCmd)
 	})
