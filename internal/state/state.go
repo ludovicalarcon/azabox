@@ -19,6 +19,7 @@ type State interface {
 	Save() error
 	UpdateEntrie(dto.BinaryInfo)
 	Has(string) bool
+	Entry(string) (dto.BinaryInfo, bool)
 	Entries() map[string]dto.BinaryInfo
 }
 
@@ -105,6 +106,11 @@ func (l *LocalState) Save() error {
 func (l *LocalState) Has(binaryName string) bool {
 	_, ok := l.Binaries[binaryName]
 	return ok
+}
+
+func (l *LocalState) Entry(binaryName string) (dto.BinaryInfo, bool) {
+	binary, ok := l.Binaries[binaryName]
+	return binary, ok
 }
 
 func (l *LocalState) Entries() map[string]dto.BinaryInfo {

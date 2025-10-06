@@ -10,8 +10,16 @@ import (
 
 type DummyResolver struct{}
 
-func (d *DummyResolver) Resolve(*dto.BinaryInfo) (string, error) {
+func (r DummyResolver) Resolve(*dto.BinaryInfo) (string, error) {
 	return "", nil
+}
+
+func (r DummyResolver) ResolveLatestVersion(dto.BinaryInfo) (string, error) {
+	return "0.0.0", nil
+}
+
+func (r DummyResolver) Name() string {
+	return "dummy"
 }
 
 func TestRegistry(t *testing.T) {

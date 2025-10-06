@@ -37,6 +37,7 @@ func setupCommands() error {
 
 	rootCmd.AddCommand(newInstallCommand(azaInstaller, azaState))
 	rootCmd.AddCommand(newListCommand(azaState))
+	rootCmd.AddCommand(newUpdateCommand(azaInstaller, azaState))
 
 	return nil
 }
