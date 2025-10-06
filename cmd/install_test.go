@@ -109,7 +109,7 @@ func TestInstallBinary(t *testing.T) {
 		localInstaller, err := installer.New()
 		require.NoError(t, err)
 		require.NotNil(t, localInstaller)
-		cfg := InstallConfig{
+		cfg := InstallCommandConfig{
 			azaInstaller: localInstaller,
 			azaState:     dummyState,
 		}
@@ -139,7 +139,7 @@ func TestInstallBinary(t *testing.T) {
 		}
 		dummyInstaller := &DummyInstaller{}
 		dummyResolver := &DummyResolver{}
-		cfg := InstallConfig{
+		cfg := InstallCommandConfig{
 			azaInstaller: dummyInstaller,
 			azaState:     dummyState,
 		}
@@ -174,7 +174,7 @@ func TestInstallBinary(t *testing.T) {
 		dummyState := &DummyState{}
 		dummyInstaller := &DummyInstaller{onError: true}
 		dummyResolver := &DummyResolver{}
-		cfg := InstallConfig{
+		cfg := InstallCommandConfig{
 			azaInstaller: dummyInstaller,
 			azaState:     dummyState,
 		}

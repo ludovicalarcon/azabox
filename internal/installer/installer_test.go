@@ -557,3 +557,50 @@ func TestDownloader_CreateSymlink(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestIsSupportedFormat(t *testing.T) {
+	t.Run("should return if the format is supported or not", func(t *testing.T) {
+		testCases := []struct {
+			name     string
+			file     string
+			expected bool
+		}{
+			{
+				name:     "tar gz format",
+				file:     "foo.tar.gz",
+				expected: true,
+			}, {
+				name:     "tgz format",
+				file:     "foo.tgz",
+				expected: true,
+			}, {
+				name:     "zip format",
+				file:     "foo.zip",
+				expected: true,
+			}, {
+				name:     "binary",
+				file:     "foo",
+				expected: true,
+			}, {
+				name:     "exe format",
+				file:     "foo.exe",
+				expected: true,
+			}, {
+				name:     "deb format",
+				file:     "foo.deb",
+				expected: false,
+			}, {
+				name:     "rpm format",
+				file:     "foo.rpm",
+				expected: false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				got := IsSupportedFormat(tc.file)
+				assert.Equal(t, tc.expected, got)
+			})
+		}
+	})
+}

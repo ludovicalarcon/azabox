@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
+	"gitlab.com/ludovic-alarcon/azabox/internal/installer"
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 	"gitlab.com/ludovic-alarcon/azabox/internal/platform"
 )
@@ -17,6 +18,7 @@ const (
 	GHAPIRepoSegment                  = "/repos"
 	GHAPIReleaseSegmentTemplate       = "/%s/releases/tags/%s"
 	GHAPIReleaseLatestSegmentTemplate = "/%s/releases/%s"
+	GithubResolverName                = "github"
 
 	AcceptHeader    = "application/vnd.github+json"
 	UserAgentHeader = "azabox"
@@ -56,10 +58,7 @@ func createHttpRequest(url string) *http.Request {
 	return req
 }
 
-func (r *GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
-	logging.Logger.Debugw("Resolve binary for github", "binary", binaryInfo.Name, "owner",
-		binaryInfo.Owner, "version", binaryInfo.Version)
-
+func (r GithubResolver) callGithubReleaseEndpoint(binaryInfo dto.BinaryInfo) (GitHubReleaseResponse, error) {
 	url := fmt.Sprintf(r.releaseAPIUrlTemplate, binaryInfo.FullName, binaryInfo.Version)
 	if binaryInfo.Version == "latest" {
 		url = fmt.Sprintf(r.releaseLatestAPIUrlTemplate, binaryInfo.FullName, binaryInfo.Version)
@@ -68,18 +67,30 @@ func (r *GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return GitHubReleaseResponse{}, err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("request error: %s", resp.Status)
+		return GitHubReleaseResponse{}, fmt.Errorf("request error: %s", resp.Status)
 	}
 
 	var data GitHubReleaseResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return "", fmt.Errorf("failed to parse data: %w", err)
+		return GitHubReleaseResponse{}, fmt.Errorf("failed to parse data: %w", err)
+	}
+
+	return data, nil
+}
+
+func (r GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
+	logging.Logger.Debugw("Resolve binary for github", "binary", binaryInfo.Name, "owner",
+		binaryInfo.Owner, "version", binaryInfo.Version)
+
+	data, err := r.callGithubReleaseEndpoint(*binaryInfo)
+	if err != nil {
+		return "", err
 	}
 
 	os := runtime.GOOS
@@ -91,12 +102,27 @@ func (r *GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
 		downloadURL := strings.ToLower(asset.Url)
 		if strings.Contains(downloadURL, os) &&
 			(strings.Contains(downloadURL, arch) || strings.Contains(downloadURL, archNormalized)) {
-			logging.Logger.Debugw("download URL", "url", asset.Url, "name", binaryInfo.Name,
-				"platform", os, "arch", arch, "version", binaryInfo.Version, "resolvedVersion", data.Name)
-			binaryInfo.InstalledVersion = data.Name
-			return asset.Url, nil
+			if installer.IsSupportedFormat(downloadURL) {
+				logging.Logger.Debugw("download URL", "url", asset.Url, "name", binaryInfo.Name,
+					"platform", os, "arch", arch, "version", binaryInfo.Version, "resolvedVersion", data.Name)
+				binaryInfo.InstalledVersion = data.Name
+				binaryInfo.Resolver = GithubResolverName
+				return asset.Url, nil
+			}
 		}
 	}
 
 	return "", nil
+}
+
+func (r GithubResolver) ResolveLatestVersion(binaryInfo dto.BinaryInfo) (string, error) {
+	tmpBinaryInfo := binaryInfo
+	tmpBinaryInfo.Version = LatestVersion
+
+	data, err := r.callGithubReleaseEndpoint(tmpBinaryInfo)
+	return data.Name, err
+}
+
+func (r GithubResolver) Name() string {
+	return GithubResolverName
 }

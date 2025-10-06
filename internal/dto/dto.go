@@ -1,6 +1,9 @@
 package dto
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type BinaryInfo struct {
 	FullName         string
@@ -8,9 +11,10 @@ type BinaryInfo struct {
 	Owner            string
 	Version          string
 	InstalledVersion string
+	Resolver         string
 }
 
-func (b *BinaryInfo) String() string {
+func (b BinaryInfo) String() string {
 	if b.FullName == "" {
 		return ""
 	}
@@ -20,4 +24,18 @@ func (b *BinaryInfo) String() string {
 	} else {
 		return fmt.Sprintf("%s in version %s", b.FullName, b.InstalledVersion)
 	}
+}
+
+func NormalizeName(name string) string {
+	if strings.Contains(name, "/") || name == "" {
+		return name
+	}
+	return fmt.Sprintf("%s/%s", name, name)
+}
+
+func (b BinaryInfo) DisplayName() string {
+	if b.Name == b.Owner {
+		return b.Name
+	}
+	return b.FullName
 }

@@ -23,7 +23,7 @@ const (
 	ArgsCountErrorMessage = "install need at least one argument, see above usage"
 )
 
-type InstallConfig struct {
+type InstallCommandConfig struct {
 	azaInstaller installer.Installer
 	azaState     state.State
 }
@@ -59,7 +59,7 @@ func binariesInfoFromArgs(installArgs []string, version string) []dto.BinaryInfo
 	return binaryInfosSlice
 }
 
-func installBinary(binaryInfo *dto.BinaryInfo, cfg InstallConfig) error {
+func installBinary(binaryInfo *dto.BinaryInfo, cfg InstallCommandConfig) error {
 	logging.Logger.Debugw("Installing binary", "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.Version)
 	fmt.Printf("Installing binary \"%s\" with version \"%s\"\n", binaryInfo.FullName, binaryInfo.Version)
@@ -102,7 +102,7 @@ func installBinary(binaryInfo *dto.BinaryInfo, cfg InstallConfig) error {
 
 func newInstallCommand(localInstaller installer.Installer, localState state.State) *cobra.Command {
 	var version string
-	cfg := InstallConfig{
+	cfg := InstallCommandConfig{
 		azaInstaller: localInstaller,
 		azaState:     localState,
 	}

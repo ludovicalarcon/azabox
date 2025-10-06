@@ -11,6 +11,7 @@ const (
 	TestBinaryFullName = "foo/foo"
 	TestBinaryVersion  = "0.0.0"
 	TestResolvedURL    = "https://fake.url/foo.tar.gz"
+	DummyResolverName  = "dummy"
 
 	DummyStateErrorMessage     = "some error in state"
 	DummyResolverErrorMessage  = "some error in resolver"
@@ -50,13 +51,19 @@ func (s *DummyState) Has(binaryName string) bool {
 	return ok
 }
 
+func (s *DummyState) Entry(binaryName string) (dto.BinaryInfo, bool) {
+	binary, ok := s.binaries[binaryName]
+	return binary, ok
+}
+
 func (s *DummyState) Entries() map[string]dto.BinaryInfo {
 	return s.binaries
 }
 
 type DummyResolver struct {
-	resolveCount int
-	onError      bool
+	resolveCount              int
+	resolveLatestVersionCount int
+	onError                   bool
 }
 
 func (r *DummyResolver) Resolve(*dto.BinaryInfo) (string, error) {
@@ -65,6 +72,18 @@ func (r *DummyResolver) Resolve(*dto.BinaryInfo) (string, error) {
 		return "", errors.New(DummyResolverErrorMessage)
 	}
 	return TestResolvedURL, nil
+}
+
+func (r *DummyResolver) ResolveLatestVersion(dto.BinaryInfo) (string, error) {
+	r.resolveLatestVersionCount++
+	if r.onError {
+		return "", errors.New(DummyResolverErrorMessage)
+	}
+	return TestBinaryVersion, nil
+}
+
+func (r *DummyResolver) Name() string {
+	return DummyResolverName
 }
 
 type DummyInstaller struct {

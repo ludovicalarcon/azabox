@@ -190,6 +190,21 @@ func TestEntries(t *testing.T) {
 	})
 }
 
+func TestEntry(t *testing.T) {
+	t.Run("should return the binaries and true if present in state", func(t *testing.T) {
+		state := NewState("foo.json")
+		name, version := testBinaryName, testBinaryVersion
+		binaryInfo := dto.BinaryInfo{FullName: name, Version: version, Name: name, Owner: name, InstalledVersion: version}
+
+		require.Empty(t, state.Binaries)
+		state.UpdateEntrie(binaryInfo)
+
+		binary, ok := state.Entry(binaryInfo.FullName)
+		assert.True(t, ok, "binary should be in state")
+		assert.Equal(t, binaryInfo, binary)
+	})
+}
+
 func TestStateDirectory(t *testing.T) {
 	t.Run("should return user config dir", func(t *testing.T) {
 		tmpDir := t.TempDir()

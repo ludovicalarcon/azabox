@@ -245,6 +245,9 @@ func (d *LocalInstaller) createSymlink(binaryInfo *dto.BinaryInfo, target string
 }
 
 func isArchiveFormat(file string) bool {
-	ext := filepath.Ext(file)
-	return ext == ".zip" || strings.HasSuffix(file, ".tar.gz") || strings.HasSuffix(file, ".tgz")
+	return strings.HasSuffix(file, ".zip") || strings.HasSuffix(file, ".tar.gz") || strings.HasSuffix(file, ".tgz")
+}
+
+func IsSupportedFormat(file string) bool {
+	return isArchiveFormat(file) || filepath.Ext(file) == "" || filepath.Ext(file) == ".exe"
 }

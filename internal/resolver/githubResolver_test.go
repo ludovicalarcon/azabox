@@ -113,46 +113,95 @@ func TestResolve(t *testing.T) {
 		assert.Equal(t, expectedURL, url)
 	})
 
-	t.Run("should resolve successfully on latest version", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
+	t.Run("should resolve latest version", func(t *testing.T) {
+		testCases := []struct {
+			name       string
+			extensions string
+			empty      bool
+		}{
+			{
+				name:       "tgz",
+				extensions: ".tgz",
+				empty:      false,
+			},
+			{
+				name:       "tar gz",
+				extensions: ".tar.gz",
+				empty:      false,
+			},
+			{
+				name:       "zip",
+				extensions: ".zip",
+				empty:      false,
+			},
+			{
+				name:       "exe",
+				extensions: ".exe",
+				empty:      false,
+			},
+			{
+				name:       "no extension",
+				extensions: "",
+				empty:      false,
+			},
+			{
+				name:       "deb",
+				extensions: ".deb",
+				empty:      true,
+			},
+			{
+				name:       "rpm",
+				extensions: ".rpm",
+				empty:      true,
+			},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Cleanup(func() {
+					logging.LogLevel = ""
+					logging.Logger = nil
+				})
 
-		initLogger()
-		binaryInfo := newTestBinaryInfo()
-		binaryInfo.Version = "latest"
-		expectedURL := fmt.Sprintf("https://github.com/foo/bar/releases/download/v1.0.0/bar-%s-%s",
-			runtime.GOOS, runtime.GOARCH)
-		latestSegmentRelease := fmt.Sprintf(GHAPIReleaseLatestSegmentTemplate, binaryInfo.FullName, binaryInfo.Version)
+				initLogger()
+				binaryInfo := newTestBinaryInfo()
+				binaryInfo.Version = LatestVersion
+				expectedURL := fmt.Sprintf("https://github.com/foo/bar/releases/download/v1.0.0/bar-%s-%s%s",
+					runtime.GOOS, runtime.GOARCH, tc.extensions)
+				latestSegmentRelease := fmt.Sprintf(GHAPIReleaseLatestSegmentTemplate, binaryInfo.FullName, binaryInfo.Version)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.Contains(r.URL.Path, latestSegmentRelease) {
-				resp := GitHubReleaseResponse{
-					Name: "v1.0.0",
-					Assets: []GitHubReleaseResponseAsset{
-						{
-							Url: expectedURL,
-						},
-					},
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if strings.Contains(r.URL.Path, latestSegmentRelease) {
+						resp := GitHubReleaseResponse{
+							Name: "v1.0.0",
+							Assets: []GitHubReleaseResponseAsset{
+								{
+									Url: expectedURL,
+								},
+							},
+						}
+						data, err := json.Marshal(resp)
+						if err != nil {
+							require.NoError(t, err)
+						}
+						_, err = w.Write(data)
+						require.NoError(t, err)
+					} else {
+						http.Error(w, "wrong path", http.StatusBadRequest)
+					}
+				}))
+				defer server.Close()
+
+				resolver := NewGithubResolver(server.URL)
+				url, err := resolver.Resolve(binaryInfo)
+
+				assert.NoError(t, err)
+				if tc.empty {
+					assert.Empty(t, url)
+				} else {
+					assert.Equal(t, expectedURL, url)
 				}
-				data, err := json.Marshal(resp)
-				if err != nil {
-					require.NoError(t, err)
-				}
-				_, err = w.Write(data)
-				require.NoError(t, err)
-			} else {
-				http.Error(w, "wrong path", http.StatusBadRequest)
-			}
-		}))
-		defer server.Close()
-
-		resolver := NewGithubResolver(server.URL)
-		url, err := resolver.Resolve(binaryInfo)
-
-		assert.NoError(t, err)
-		assert.Equal(t, expectedURL, url)
+			})
+		}
 	})
 
 	t.Run("should handle no match", func(t *testing.T) {
@@ -226,4 +275,54 @@ func TestResolve(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed to parse data")
 		assert.Empty(t, url)
 	})
+}
+
+func TestResolveLatestVersion(t *testing.T) {
+	t.Run("should resolve latest url", func(t *testing.T) {
+		t.Cleanup(func() {
+			logging.LogLevel = ""
+			logging.Logger = nil
+		})
+
+		binaryInfo := newTestBinaryInfo()
+		binaryInfo.Version = LatestVersion
+		expectedVersion := "vX.Y.Z"
+		URL := fmt.Sprintf("https://github.com/foo/bar/releases/download/v1.0.0/bar-%s-%s%s",
+			runtime.GOOS, runtime.GOARCH, ".tar.gz")
+		latestSegmentRelease := fmt.Sprintf(GHAPIReleaseLatestSegmentTemplate, binaryInfo.FullName, binaryInfo.Version)
+
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.Contains(r.URL.Path, latestSegmentRelease) {
+				resp := GitHubReleaseResponse{
+					Name: expectedVersion,
+					Assets: []GitHubReleaseResponseAsset{
+						{
+							Url: URL,
+						},
+					},
+				}
+				data, err := json.Marshal(resp)
+				if err != nil {
+					require.NoError(t, err)
+				}
+				_, err = w.Write(data)
+				require.NoError(t, err)
+			} else {
+				http.Error(w, "wrong path", http.StatusBadRequest)
+			}
+		}))
+		defer server.Close()
+
+		initLogger()
+		resolver := NewGithubResolver(server.URL)
+		version, err := resolver.ResolveLatestVersion(*binaryInfo)
+
+		assert.NoError(t, err)
+		assert.Equal(t, expectedVersion, version)
+	})
+}
+
+func TestName(t *testing.T) {
+	got := NewGithubResolver("").Name()
+	assert.Equal(t, GithubResolverName, got)
 }

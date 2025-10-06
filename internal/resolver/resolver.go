@@ -12,8 +12,12 @@ var (
 	registry *RegistryResolver
 )
 
+const LatestVersion = "latest"
+
 type Resolver interface {
+	Name() string
 	Resolve(*dto.BinaryInfo) (string, error)
+	ResolveLatestVersion(dto.BinaryInfo) (string, error)
 }
 
 type RegistryResolver struct {
