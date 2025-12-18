@@ -60,7 +60,7 @@ func binariesInfoFromArgs(installArgs []string, version string) []dto.BinaryInfo
 }
 
 func installBinary(binaryInfo *dto.BinaryInfo, cfg InstallCommandConfig) error {
-	logging.Logger.Debugw("Installing binary", "binary", binaryInfo.Name, "owner",
+	logging.Logger().Debug("Installing binary", "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.Version)
 	fmt.Printf("Installing binary \"%s\" with version \"%s\"\n", binaryInfo.FullName, binaryInfo.Version)
 
@@ -79,14 +79,14 @@ func installBinary(binaryInfo *dto.BinaryInfo, cfg InstallCommandConfig) error {
 		url, err := resolver.Resolve(binaryInfo)
 		if err == nil && url != "" {
 			resolvedUrl = url
-			logging.Logger.Debugw("Matched resolver", "type",
+			logging.Logger().Debug("Matched resolver", "type",
 				fmt.Sprintf("%T", resolver), "url", url)
 			break
 		}
 	}
 
 	if resolvedUrl == "" {
-		logging.Logger.Debugw("Binary not found", "binary", binaryInfo.Name, "owner",
+		logging.Logger().Debug("Binary not found", "binary", binaryInfo.Name, "owner",
 			binaryInfo.Owner, "version", binaryInfo.Version)
 		fmt.Printf("Binary \"%s\" with version \"%s\" not found\n", binaryInfo.FullName, binaryInfo.Version)
 		return cfg.azaState.Save()

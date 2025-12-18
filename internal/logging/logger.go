@@ -2,78 +2,59 @@ package logging
 
 import (
 	"os"
+	"sync"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	azalogger "gitlab.com/ludovic-alarcon/aza-logger"
 )
+
+const logLevelEnvVar = "AZABOX_LOG_LEVEL"
 
 var (
-	Logger   *zap.SugaredLogger
 	LogLevel string
+	logger   azalogger.Logger
+	once     sync.Once
 )
 
-type Encoding int
-
-const (
-	Console Encoding = iota
-	Json
-
-	logLevelEnvVar = "AZABOX_LOG_LEVEL"
-)
-
-type Config struct {
-	Encoding Encoding
-}
-
-func getEndoding(enc Encoding) string {
-	switch enc {
-	case Console:
-		return "console"
-	case Json:
-		return "json"
-	}
-	return "json"
-}
-
-func createZapConfig(cfg Config) zap.Config {
-	level := LogLevel
-	if level == "" {
-		level = os.Getenv(logLevelEnvVar)
-		if level == "" {
-			level = "info"
+func setLogLevel(flagLogLevel string) {
+	logLevel := flagLogLevel
+	if logLevel == "" {
+		logLevel = os.Getenv(logLevelEnvVar)
+		if logLevel == "" {
+			logLevel = "info"
 		}
 	}
-
-	var zapLevel zapcore.Level
-	if err := zapLevel.UnmarshalText([]byte(level)); err != nil {
-		zapLevel = zapcore.InfoLevel
-	}
-
-	cfgZap := zap.Config{
-		Level:         zap.NewAtomicLevelAt(zapLevel),
-		Encoding:      getEndoding(cfg.Encoding),
-		OutputPaths:   []string{"stdout"},
-		EncoderConfig: zap.NewProductionEncoderConfig(),
-	}
-
-	if cfg.Encoding == Console {
-		cfgZap.EncoderConfig = zap.NewDevelopmentEncoderConfig()
-	}
-
-	if zapLevel != zap.DebugLevel {
-		cfgZap.DisableStacktrace = true
-		cfgZap.DisableCaller = true
-	}
-
-	return cfgZap
+	os.Setenv(azalogger.LogLevelEnvVar, logLevel)
 }
 
-func InitLogger(cfg Config) error {
-	cfgZap := createZapConfig(cfg)
-	zapLogger, err := cfgZap.Build()
-	if err != nil {
-		return err
+func InitLogger() error {
+	var err error
+	setLogLevel(LogLevel)
+	once.Do(func() {
+		logger, err = azalogger.NewLogger(azalogger.Config{
+			Backend:  azalogger.ZapBackend,
+			Env:      azalogger.ProdEnvironment,
+			LogLevel: azalogger.InfoLevel,
+		})
+		if err == nil {
+			logger = logger.With("cli", "azalogger")
+		}
+	})
+	return err
+}
+
+func Logger() azalogger.Logger {
+	if logger == nil {
+		panic("logger must be initialized")
 	}
-	Logger = zapLogger.Sugar()
-	return nil
+	return logger
+}
+
+// Helpers shared for tests in all packages
+func UseInMemoryLogger() {
+	cfg := azalogger.Config{
+		Backend:  azalogger.InMemoryBackend,
+		Env:      azalogger.ProdEnvironment,
+		LogLevel: azalogger.DebugLevel,
+	}
+	logger = azalogger.NewInMemoryLogger(cfg)
 }

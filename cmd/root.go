@@ -23,7 +23,7 @@ var rootCmd = &cobra.Command{
 	Long:  RootLongMessage,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return logging.InitLogger(logging.Config{Encoding: logging.Console})
+		return logging.InitLogger()
 	},
 }
 
@@ -44,8 +44,8 @@ func setupCommands() error {
 
 func Execute() error {
 	defer func() {
-		if logging.Logger != nil {
-			_ = logging.Logger.Sync()
+		if logging.Logger() != nil {
+			logging.Logger().Sync()
 		}
 	}()
 

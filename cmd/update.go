@@ -75,10 +75,10 @@ func checkUpdate(binaryInfo dto.BinaryInfo, cfg UpdateCommandConfig) error {
 		return err
 	}
 
-	logging.Logger.Debugw("update command", "resolvedVersion", version,
+	logging.Logger().Debug("update command", "resolvedVersion", version,
 		"name", binaryInfo.DisplayName(), "currentVersion", binaryInfo.InstalledVersion)
 	if version != binaryInfo.InstalledVersion {
-		logging.Logger.Debugw("update binary", "name", binaryInfo.DisplayName(),
+		logging.Logger().Debug("update binary", "name", binaryInfo.DisplayName(),
 			"currentVersion", binaryInfo.InstalledVersion, "newVersion", version)
 		fmt.Printf("Updating %s from %s to %s\n", binaryInfo.DisplayName(),
 			binaryInfo.InstalledVersion, version)

@@ -10,53 +10,26 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
+	azalogger "gitlab.com/ludovic-alarcon/aza-logger"
 	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
 )
 
 func TestRootCmd(t *testing.T) {
-	t.Run("should init logger in persistentPreRun", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.Logger = nil
-			logging.LogLevel = ""
-		})
-
-		assert.Nil(t, logging.Logger)
-
-		err := rootCmd.PersistentPreRunE(rootCmd.Root(), []string{})
-		require.NoError(t, err)
-		assert.NotNil(t, logging.Logger)
-	})
-
 	t.Run("should init registry resolver with default resolvers", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.Logger = nil
-			logging.LogLevel = ""
-		})
-		err := rootCmd.Execute()
+		err := Execute()
 		assert.NoError(t, err)
 		resolvers := resolver.GetRegistryResolver().GetResolvers()
 		assert.Len(t, resolvers, 1)
 	})
 
 	t.Run("should set logLevel when flag is used", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.Logger = nil
-			logging.LogLevel = ""
-		})
-
 		rootCmd.SetArgs([]string{"--log-level", "debug"})
 		err := rootCmd.Execute()
 		assert.NoError(t, err)
-		assert.Equal(t, "debug", logging.LogLevel)
+		assert.Equal(t, "debug", azalogger.DebugLevel.String())
 	})
 
 	t.Run("should handle error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		expectedContains := "some error"
 		saveRootCmd := rootCmd
 		defer func() { rootCmd = saveRootCmd }()
@@ -68,8 +41,6 @@ func TestRootCmd(t *testing.T) {
 		}
 
 		rootCmd = fakeCmd
-		err := logging.InitLogger(logging.Config{Encoding: logging.Json})
-		require.NoError(t, err)
 
 		// capture stderr
 		saveSterr := os.Stderr

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gitlab.com/ludovic-alarcon/azabox/internal/dto"
-	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
 )
 
@@ -180,12 +179,6 @@ func TestCheckUpdate(t *testing.T) {
 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Cleanup(func() {
-					logging.LogLevel = ""
-					logging.Logger = nil
-				})
-
-				initLoggerForTest()
 				dummyState := DummyState{
 					binaries: make(map[string]dto.BinaryInfo, 1),
 				}
@@ -231,12 +224,6 @@ func TestCheckUpdate(t *testing.T) {
 
 func TestExecuteUpdateCommand(t *testing.T) {
 	t.Run("should handle list of binary to update", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{
 			binaries: make(map[string]dto.BinaryInfo, 3),
 		}
@@ -337,12 +324,6 @@ func TestExecuteUpdateCommand(t *testing.T) {
 	})
 
 	t.Run("should update all binaries when no parameter are given", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{
 			binaries: make(map[string]dto.BinaryInfo, 3),
 		}
@@ -377,12 +358,6 @@ func TestExecuteUpdateCommand(t *testing.T) {
 	})
 
 	t.Run("should handle error on update when no parameter are given", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{
 			binaries: make(map[string]dto.BinaryInfo, 1),
 		}
@@ -417,12 +392,6 @@ func TestExecuteUpdateCommand(t *testing.T) {
 
 func TestNewUpdateCommand(t *testing.T) {
 	t.Run("should return any exec error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{
 			binaries: make(map[string]dto.BinaryInfo, 1),
 		}

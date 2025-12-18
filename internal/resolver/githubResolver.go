@@ -85,7 +85,7 @@ func (r GithubResolver) callGithubReleaseEndpoint(binaryInfo dto.BinaryInfo) (Gi
 }
 
 func (r GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
-	logging.Logger.Debugw("Resolve binary for github", "binary", binaryInfo.Name, "owner",
+	logging.Logger().Debug("Resolve binary for github", "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.Version)
 
 	data, err := r.callGithubReleaseEndpoint(*binaryInfo)
@@ -96,14 +96,14 @@ func (r GithubResolver) Resolve(binaryInfo *dto.BinaryInfo) (string, error) {
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 	archNormalized := platform.NormalizeArch(arch)
-	logging.Logger.Debugw("os info", "os", os, "arch", arch, "normalized", archNormalized)
+	logging.Logger().Debug("os info", "os", os, "arch", arch, "normalized", archNormalized)
 
 	for _, asset := range data.Assets {
 		downloadURL := strings.ToLower(asset.Url)
 		if strings.Contains(downloadURL, os) &&
 			(strings.Contains(downloadURL, arch) || strings.Contains(downloadURL, archNormalized)) {
 			if installer.IsSupportedFormat(downloadURL) {
-				logging.Logger.Debugw("download URL", "url", asset.Url, "name", binaryInfo.Name,
+				logging.Logger().Debug("download URL", "url", asset.Url, "name", binaryInfo.Name,
 					"platform", os, "arch", arch, "version", binaryInfo.Version, "resolvedVersion", data.Name)
 				binaryInfo.InstalledVersion = data.Name
 				binaryInfo.Resolver = GithubResolverName
