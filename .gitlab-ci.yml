@@ -1,6 +1,6 @@
 variables:
   BINARY_NAME: azabox
-  GO_VERSION: 1.24
+  GO_VERSION: 1.25
   LINUX_BIN: $BINARY_NAME-linux-amd64
   DARWIN_BIN: $BINARY_NAME-darwin-amd64
   SKIP_CI: "true"
