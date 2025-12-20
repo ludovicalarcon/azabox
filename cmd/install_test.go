@@ -12,10 +12,6 @@ import (
 	"gitlab.com/ludovic-alarcon/azabox/internal/resolver"
 )
 
-func initLoggerForTest() {
-	_ = logging.InitLogger(logging.Config{Encoding: logging.Json})
-}
-
 func TestNewInstallCommand(t *testing.T) {
 	t.Run("should create a new install command", func(t *testing.T) {
 		localInstaller, err := installer.New()
@@ -47,12 +43,7 @@ func TestInstallCommand(t *testing.T) {
 	})
 
 	t.Run("should not return an error when there is at least one args provided", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
+		logging.UseInMemoryLogger()
 		dummyState := &DummyState{}
 		localInstaller, err := installer.New()
 		require.NoError(t, err)
@@ -68,12 +59,6 @@ func TestInstallCommand(t *testing.T) {
 	})
 
 	t.Run("should return an error when binary already present in state", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		localInstaller, err := installer.New()
 		require.NoError(t, err)
 		require.NotNil(t, localInstaller)
@@ -99,12 +84,6 @@ func TestInstallCommand(t *testing.T) {
 
 func TestInstallBinary(t *testing.T) {
 	t.Run("should handle error on state failed", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{onError: true}
 		localInstaller, err := installer.New()
 		require.NoError(t, err)
@@ -128,12 +107,6 @@ func TestInstallBinary(t *testing.T) {
 	})
 
 	t.Run("should resolve url and install binary", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{
 			binaries: make(map[string]dto.BinaryInfo, 1),
 		}
@@ -165,12 +138,6 @@ func TestInstallBinary(t *testing.T) {
 	})
 
 	t.Run("should handle error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLoggerForTest()
 		dummyState := &DummyState{}
 		dummyInstaller := &DummyInstaller{onError: true}
 		dummyResolver := &DummyResolver{}
@@ -309,7 +276,7 @@ func TestBinariesInfoFromArgs(t *testing.T) {
 			},
 		},
 		{
-			name:     "nultiples binaries",
+			name:     "multiples binaries",
 			binaries: []string{"foo/bar", "totocli", "cli/cli"},
 			version:  "1.2.3",
 			expected: struct {

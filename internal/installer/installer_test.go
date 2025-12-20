@@ -17,10 +17,6 @@ import (
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 )
 
-func initLogger() {
-	_ = logging.InitLogger(logging.Config{Encoding: logging.Json})
-}
-
 func TestDownloader(t *testing.T) {
 	t.Run("should create default download", func(t *testing.T) {
 		expectedTmpFolder := os.TempDir()
@@ -48,12 +44,7 @@ func TestDownloader(t *testing.T) {
 	})
 
 	t.Run("should install", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
+		logging.UseInMemoryLogger()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := io.WriteString(w, "binary data")
 			require.NoError(t, err)
@@ -72,12 +63,6 @@ func TestDownloader(t *testing.T) {
 	})
 
 	t.Run("should handle download error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		server := httptest.NewServer(http.NotFoundHandler())
 		defer server.Close()
 
@@ -96,12 +81,6 @@ func TestDownloader(t *testing.T) {
 
 func TestDownloader_DownloadToTmpDir(t *testing.T) {
 	t.Run("should download in tmp folder", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := io.WriteString(w, "binary data")
 			require.NoError(t, err)
@@ -125,12 +104,6 @@ func TestDownloader_DownloadToTmpDir(t *testing.T) {
 	})
 
 	t.Run("should handle error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		server := httptest.NewServer(http.NotFoundHandler())
 		defer server.Close()
 
@@ -147,12 +120,6 @@ func TestDownloader_DownloadToTmpDir(t *testing.T) {
 	})
 
 	t.Run("should handle wrong url", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
 		downloader.WithTmpFolder(t.TempDir())
@@ -165,13 +132,7 @@ func TestDownloader_DownloadToTmpDir(t *testing.T) {
 	})
 
 	t.Run("should handle error on file creation", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
 		tmpDir := t.TempDir()
-
-		initLogger()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := io.WriteString(w, "binary data")
 			require.NoError(t, err)
@@ -194,16 +155,10 @@ func TestDownloader_DownloadToTmpDir(t *testing.T) {
 
 func TestDownloader_InstallBinary(t *testing.T) {
 	t.Run("should install binary", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		tmpDir := t.TempDir()
 		t.Setenv("XDG_CONFIG_HOME", tmpDir)
 		t.Setenv("HOME", tmpDir)
 
-		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
 		downloader.WithInstallFolder(tmpDir)
@@ -222,16 +177,10 @@ func TestDownloader_InstallBinary(t *testing.T) {
 	})
 
 	t.Run("should install binary from archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		tmpDir := t.TempDir()
 		t.Setenv("XDG_CONFIG_HOME", tmpDir)
 		t.Setenv("HOME", tmpDir)
 
-		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
 		downloader.WithInstallFolder(tmpDir)
@@ -261,16 +210,10 @@ func TestDownloader_InstallBinary(t *testing.T) {
 	})
 
 	t.Run("should handle corrupted archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		tmpDir := t.TempDir()
 		t.Setenv("XDG_CONFIG_HOME", tmpDir)
 		t.Setenv("HOME", tmpDir)
 
-		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
 		downloader.WithInstallFolder(tmpDir)
@@ -285,13 +228,7 @@ func TestDownloader_InstallBinary(t *testing.T) {
 	})
 
 	t.Run("should handle open error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		tmpDir := t.TempDir()
-		initLogger()
 		downloader, err := New()
 		require.NoError(t, err)
 		downloader.WithInstallFolder(tmpDir)
@@ -303,11 +240,6 @@ func TestDownloader_InstallBinary(t *testing.T) {
 	})
 
 	t.Run("should handle read only folder error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		if os.Getenv("SKIP_CI") == "true" {
 			t.Skip("Skipping in CI because of permission not respected (umask?)")
 		}
@@ -318,7 +250,6 @@ func TestDownloader_InstallBinary(t *testing.T) {
 
 		err := os.Chmod(tmpDir, 0o400)
 		require.NoError(t, err)
-		initLogger()
 
 		downloader, err := New()
 		require.NoError(t, err)
@@ -335,12 +266,6 @@ func TestDownloader_InstallBinary(t *testing.T) {
 
 func TestExtractArchive(t *testing.T) {
 	t.Run("should handle zip archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		zipFile := filepath.Join(tmpDir, "tool.zip")
 		out, err := os.Create(zipFile)
@@ -363,12 +288,6 @@ func TestExtractArchive(t *testing.T) {
 	})
 
 	t.Run("should handle no binary found zip archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		zipFile := filepath.Join(tmpDir, "tool.zip")
 		out, err := os.Create(zipFile)
@@ -390,12 +309,6 @@ func TestExtractArchive(t *testing.T) {
 	})
 
 	t.Run("should handle error on zip archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		invalidZip := filepath.Join(tmpDir, "invalid.zip")
 		_ = os.WriteFile(invalidZip, []byte("dummy"), 0o600)
@@ -405,12 +318,6 @@ func TestExtractArchive(t *testing.T) {
 	})
 
 	t.Run("should handle tar gz archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		tgzFile := filepath.Join(tmpDir, "tool.tar.gz")
 		out, err := os.Create(tgzFile)
@@ -436,12 +343,6 @@ func TestExtractArchive(t *testing.T) {
 	})
 
 	t.Run("should handle no binary found in tar gz archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		tgzFile := filepath.Join(tmpDir, "tool.tar.gz")
 		out, err := os.Create(tgzFile)
@@ -466,12 +367,6 @@ func TestExtractArchive(t *testing.T) {
 	})
 
 	t.Run("should handle error on tar gz archive", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		invalidTgz := filepath.Join(tmpDir, "invalid.tar.gz")
 		_ = os.WriteFile(invalidTgz, []byte("dummy"), 0o600)
@@ -519,12 +414,6 @@ func TestIsArchiveFormat(t *testing.T) {
 
 func TestDownloader_CreateSymlink(t *testing.T) {
 	t.Run("should create symlink", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		downloader, err := New()
 		require.NoError(t, err)
@@ -542,12 +431,6 @@ func TestDownloader_CreateSymlink(t *testing.T) {
 	})
 
 	t.Run("should handle error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		tmpDir := t.TempDir()
 		downloader, err := New()
 		require.NoError(t, err)

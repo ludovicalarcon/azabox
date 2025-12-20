@@ -81,7 +81,7 @@ func (l *LocalInstaller) Install(binaryInfo *dto.BinaryInfo, url string) error {
 }
 
 func (l *LocalInstaller) downloadToTmpDir(binaryInfo *dto.BinaryInfo, url string) (string, error) {
-	logging.Logger.Debugw("Downloading", "url", url, "binary", binaryInfo.Name, "owner",
+	logging.Logger().Debug("Downloading", "url", url, "binary", binaryInfo.Name, "owner",
 		binaryInfo.Owner, "version", binaryInfo.InstalledVersion)
 	fmt.Printf("Downloading %s - %s\n", binaryInfo.FullName, binaryInfo.InstalledVersion)
 
@@ -142,7 +142,7 @@ func (l *LocalInstaller) installBinary(binaryInfo *dto.BinaryInfo, tmpPath strin
 	if err := os.Chmod(targetPath, 0o755); err != nil {
 		return "", err
 	}
-	logging.Logger.Debugw("installed binary", "path", targetPath, "binary", binaryInfo.Name,
+	logging.Logger().Debug("installed binary", "path", targetPath, "binary", binaryInfo.Name,
 		"version", binaryInfo.InstalledVersion)
 	return targetPath, nil
 }
@@ -170,6 +170,7 @@ func extractZip(path, binaryName string) (string, error) {
 			fileName = tmp[1]
 		}
 		if strings.Contains(fileName, binaryName) {
+			logging.Logger().Debug("copy binary", "name", f.Name)
 			outPath := filepath.Join(tempDir, binaryName)
 			rc, err := f.Open()
 			if err != nil {
@@ -218,7 +219,7 @@ func extractTarGz(path, tool string) (string, error) {
 			fileName = tmp[1]
 		}
 		if strings.Contains(fileName, tool) {
-			logging.Logger.Debugw("copy binary", "name", hdr.Name)
+			logging.Logger().Debug("copy binary", "name", hdr.Name)
 			outPath := filepath.Join(tempDir, tool)
 			outFile, err := os.Create(filepath.Clean(outPath))
 			if err != nil {
@@ -234,9 +235,9 @@ func extractTarGz(path, tool string) (string, error) {
 	return "", fmt.Errorf("no matching binary found in tar.gz")
 }
 
-func (d *LocalInstaller) createSymlink(binaryInfo *dto.BinaryInfo, target string) error {
-	symLinkPath := filepath.Join(d.installFolder, binaryInfo.Name)
-	logging.Logger.Debugw("creating symlink", "path", symLinkPath)
+func (l *LocalInstaller) createSymlink(binaryInfo *dto.BinaryInfo, target string) error {
+	symLinkPath := filepath.Join(l.installFolder, binaryInfo.Name)
+	logging.Logger().Debug("creating symlink", "path", symLinkPath)
 	_ = os.Remove(symLinkPath)
 	if err := os.Symlink(target, symLinkPath); err != nil {
 		return err

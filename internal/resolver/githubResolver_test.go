@@ -16,10 +16,6 @@ import (
 	"gitlab.com/ludovic-alarcon/azabox/internal/logging"
 )
 
-func initLogger() {
-	_ = logging.InitLogger(logging.Config{Encoding: logging.Json})
-}
-
 func newTestBinaryInfo() *dto.BinaryInfo {
 	return &dto.BinaryInfo{
 		Owner:    "foo",
@@ -79,11 +75,7 @@ func TestCreateHttpRequest(t *testing.T) {
 
 func TestResolve(t *testing.T) {
 	t.Run("should resolve successfully", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
+		logging.UseInMemoryLogger()
 		expectedURL := fmt.Sprintf("https://github.com/foo/bar/releases/download/v1.0.0/bar-%s-%s",
 			runtime.GOOS, runtime.GOARCH)
 
@@ -105,7 +97,6 @@ func TestResolve(t *testing.T) {
 		}))
 		defer server.Close()
 
-		initLogger()
 		resolver := NewGithubResolver(server.URL)
 		url, err := resolver.Resolve(newTestBinaryInfo())
 
@@ -157,12 +148,6 @@ func TestResolve(t *testing.T) {
 		}
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
-				t.Cleanup(func() {
-					logging.LogLevel = ""
-					logging.Logger = nil
-				})
-
-				initLogger()
 				binaryInfo := newTestBinaryInfo()
 				binaryInfo.Version = LatestVersion
 				expectedURL := fmt.Sprintf("https://github.com/foo/bar/releases/download/v1.0.0/bar-%s-%s%s",
@@ -205,11 +190,6 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("should handle no match", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		expectedURL := fmt.Sprintf("https://github.com/foo/bar/releases/download/v1.0.0/bar-%s-%s",
 			runtime.GOOS, "arm4242")
 
@@ -231,7 +211,6 @@ func TestResolve(t *testing.T) {
 		}))
 		defer server.Close()
 
-		initLogger()
 		resolver := NewGithubResolver(server.URL)
 		url, err := resolver.Resolve(newTestBinaryInfo())
 
@@ -240,12 +219,6 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("should handle request error", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		server := httptest.NewServer(http.NotFoundHandler())
 		defer server.Close()
 
@@ -257,12 +230,6 @@ func TestResolve(t *testing.T) {
 	})
 
 	t.Run("should handle invalid json answer", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
-		initLogger()
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := io.WriteString(w, "invalid-json")
 			require.NoError(t, err)
@@ -279,11 +246,6 @@ func TestResolve(t *testing.T) {
 
 func TestResolveLatestVersion(t *testing.T) {
 	t.Run("should resolve latest url", func(t *testing.T) {
-		t.Cleanup(func() {
-			logging.LogLevel = ""
-			logging.Logger = nil
-		})
-
 		binaryInfo := newTestBinaryInfo()
 		binaryInfo.Version = LatestVersion
 		expectedVersion := "vX.Y.Z"
@@ -313,7 +275,6 @@ func TestResolveLatestVersion(t *testing.T) {
 		}))
 		defer server.Close()
 
-		initLogger()
 		resolver := NewGithubResolver(server.URL)
 		version, err := resolver.ResolveLatestVersion(*binaryInfo)
 
