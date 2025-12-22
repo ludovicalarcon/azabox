@@ -7,7 +7,10 @@ import (
 	azalogger "gitlab.com/ludovic-alarcon/aza-logger"
 )
 
-const logLevelEnvVar = "AZABOX_LOG_LEVEL"
+const (
+	logLevelEnvVar           = "AZABOX_LOG_LEVEL"
+	panicNotInitializedError = "logger must be initialized"
+)
 
 var (
 	LogLevel string
@@ -28,8 +31,8 @@ func setLogLevel(flagLogLevel string) {
 
 func InitLogger() error {
 	var err error
-	setLogLevel(LogLevel)
 	once.Do(func() {
+		setLogLevel(LogLevel)
 		logger, err = azalogger.NewLogger(azalogger.Config{
 			Backend:  azalogger.ZapBackend,
 			Env:      azalogger.ProdEnvironment,
@@ -44,7 +47,7 @@ func InitLogger() error {
 
 func Logger() azalogger.Logger {
 	if logger == nil {
-		panic("logger must be initialized")
+		panic(panicNotInitializedError)
 	}
 	return logger
 }
